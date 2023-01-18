@@ -242,19 +242,9 @@ ylim([5*1e-5, 1e2]);
 text(-190, .0002, strcat("COP: ", num2str(COP)), "FontWeight", "bold");
 text(-190, .0001, strcat("Capacity: ", num2str(capacity), " kJ/kg"), "FontWeight", "bold");
 legend('Vapor Compression Cycle','Isotherms (K)', 'Isentropes (kJ/kg-K)');
+title('HFC134a Vapor-Compression Refrigeration');
 hold off;
 %plotfixer;
-
-set(gas,'P',P2,'H',h2);
-T2 = temperature(gas);
-set(gas,'P',P6,'H',h6);
-T6 = temperature(gas);
-carnot = T6/(T2-T6);
-
-
-
-
-
 
 % gives the total work and the enthalpy of the compressor
 function [total_w, H] = comp_work(eta, Pin, Pout, h0)
