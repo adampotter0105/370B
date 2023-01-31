@@ -309,42 +309,25 @@ X_des_list      = [X_des_fuel_comp X_des_air_comp X_des_premixer X_des_combustor
 % improvePlot
 % hold off
 
-% Exergy Destruction Plot
+% Internal Version
+plot(1:3,[Xf1_int Xf2_int Xm3_int]./(1e6*mdot_fuel), "ro-")
+hold on
+plot(1:3,[Xa1_int Xa2_int Xm3_int]./(1e6*mdot_fuel), "bo-")
+plot(3:5,[Xm3_int Xm4_int Xm5_int]./(1e6*mdot_fuel), "go-")
+legend(["Fuel", "Air", "Mix"])
+xlabel("Station")
+ylabel("Internal Fuel-Specific Exergy [MJ/kg-fuel]")
+improvePlot
+hold off
+
+%Exergy Destruction Plot
 X_bar = categorical({'Fuel \n Compressor', 'Air \n Compressor', 'Premixer', 'Combustor', 'Turbine', 'Exhaust'});
 X_bar = reordercats(X_bar,{'Fuel \n Compressor', 'Air \n Compressor', 'Premixer', 'Combustor', 'Turbine', 'Exhaust'});
 bar(X_bar, X_des_list)
 xlabel("Conversion Device")
-ylabel("Exergy Loss [%]")
+ylabel("Flow Exergy Loss [%]")
 text(1,30,['LHV Efficiency: ' string(Eff_gas_turbine)])
 text(1,20,['Exergy Efficiency: ' string(Eff_exergy)])
-
-% Make T-s plot.
-% figure(1)
-% plot(Sair/mdot_fuel/1000,Tair,'bo--')
-% hold on
-% plot([Sa2/mdot_fuel/1000 Sm3/mdot_fuel/1000],[Ta2 Tm3],'b--')
-% plot(Sfuel/mdot_fuel/1000,Tfuel,'ro--')
-% plot([Sf2/mdot_fuel/1000 Sm3/mdot_fuel/1000],[Tf2 Tm3],'r--')
-% plot(Smix/mdot_fuel/1000,Tmix,'ko--')
-% plot([Sm3/mdot_fuel/1000 Sm4/mdot_fuel/1000],[Tm3 Tm4],'ko--')
-% plot(Sm5/mdot_fuel/1000,Tm5,'ko')
-% text(Sa1/mdot_fuel/1000,Ta1,'a,1')
-% text(Sf1/mdot_fuel/1000,Tf1,'f,1')
-% text(Sa2/mdot_fuel/1000,Ta2,'a,2')
-% text(Sf2/mdot_fuel/1000,Tf2,'f,2')
-% text(Sm3/mdot_fuel/1000,Tm3,'m,3')
-% text(Sm4/mdot_fuel/1000,Tm4,'m,4')
-% text(Sm5/mdot_fuel/1000,Tm5,'m,5')
-% text(30,1750,sprintf('Thermal Efficiency:  %.1f%% (LHV)',100*Eff_gas_turbine))
-% text(30,1550,sprintf('Air-Specific Work:   %.2f MJ/kg-air',Air_Specific_Work/1e6))
-% text(30,1350,sprintf('Fuel LHV:                 %.1f MJ/kg',LHV_fuel/1e6))
-% scale = axis
-% axis([0 400 0 2000]);
-% xlabel('Fuel-Specific Entropy (kJ/kg_f_u_e_l-K)')
-% ylabel('Temperature (K)')
-% hold off
-% % plotfixer
-% legend('off')
 
 
 
