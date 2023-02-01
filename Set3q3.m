@@ -26,7 +26,7 @@ Steam_Turbine_Polytropic_Efficiency = 0.75;
 Condense_Pump_Polytropic_Efficiency = 0.85;
 Feed_Pump_Polytropic_Efficiency = 0.85;
 
-P7w = 6800;
+Pw6 = 6800;
 Vaporfrac_6w = 0.88;
 Pinch_Point_Temp_Diff = 20;
 mdot_air = 144;
@@ -218,9 +218,75 @@ hm5 = h;
 sm5 = s;
 Sm5 = sm5*mdot_mix;
 Hm5 = hm5*mdot_mix;
-
 Pm5 = pressure(gas);
-Pm8 = Pm5;
+
+water = Water();
+
+% initial cold storage state at ambient
+Tw1 = To;
+Pw1 = Po;
+set(water,'T',Tw1,'P',Pw1);
+hw1 = enthalpy_mass(water);
+sw1 = entropy_mass(water);
+
+Pw7 = Pw6*Condenser_Pressure_Ratio;
+
+% known state at 6w
+set(water, 'P', Pw6, 'Vapor', Vaporfrac_6w);
+hw6 = enthalpy_mass(water);
+Tw6 = temperature(water);
+Tw7 = Tw6;
+set(water, 'P', Pw7, 'T', Tw7);
+hw7 = enthalpy_mass(water);
+sw7 = entropy_mass(water);
+
+Pw8 = Po;
+[work78, hw8] = comp_work(Condense_Pump_Polytropic_Efficiency, Pw7, Pw8, hw7);
+set(water, 'H', hw8, 'P', Pw8);
+Tw8 = temperature(water);
+
+
+Pw2_guess = 63000000;
+Pw2 = Pw2_guess;
+
+[work12, hw2] = comp_work(Feed_Pump_Polytropic_Efficiency, Pw1, Pw2, hw1);
+
+set(water,'H',hw2,'P',Pw2);
+Tw2 = temperature(water);
+sw2 = enthalpy_mass(water);
+
+Pw3 = Econ_Pressure_Ratio*Pw2;
+Pw4 = Boiler_Pressure_Ratio*Pw3;
+Pw5 = Superheater_Pressure_Ratio*Pw4;
+
+Pm6 = Pm5;
+Pm7 = Pm6;
+Pm8 = Pm7;
+
+% Find heat transferred through HRSG
+set(gas, 'T',Tm5,'P',Pw5);
+hlc1 = enthalpy_mass(gas);
+set(gas,'T',Tw2,'P',Pw2);
+hlc2 = enthalpy_mass(gas);
+qmax = hlc1 - hlc2;
+qactual = HRSG_effectiveness*qmax;
+
+hm8 = hm5 - qactual;
+set(gas,'H',hm8,'P',Pm8);
+Tm8 = temperature(gas);
+
+hw5 = hw2 + qactual;
+set(water, 'H',hw5,'P',Pw5);
+Tw5 = temperature(water);
+
+% Pw5_guess = 49000000;
+% Tw5 = 750;
+% set(water,'T',Tw5,'P',Pw5_guess);
+% hw5 = enthalpy_mass(water);
+
+[work56, hw6hold, X6] = turb_work(Steam_Turbine_Polytropic_Efficiency, Pw5, Pw6, hw5);
+set(water, 'H',hw6hold,'P',Pw6);
+disp(X6);
 
 offset = abs(Hm5);
 Ha1_off = Ha1 + offset;
@@ -281,5 +347,47 @@ text(Hm5_off/mdot_fuel/1e6,Tm5,'m,5')
 
 xlabel('Fuel-Specific Enthalpy Difference (MJ/kg_f_u_e_l-K)')
 ylabel('Temperature (K)')
+
+function [total_w, H] = comp_work(eta, Pin, Pout, h0)
+    w = Water();
+    set(w, "H", h0, "P", Pin) % Initial Conditions of fluid
+    n = 101; % discretization points for pressure
+    h = (Pout-Pin)/n; % integration step
+    total_w = 0; % total work output of turbine
+    for p = Pin+h:h:Pout
+        h1 = enthalpy_mass(w);
+        s0 = entropy_mass(w);
+        
+        setState_SP(w, [s0, p]) % isentropic expansion
+        h2 = enthalpy_mass(w);
+        dw_s = h2-h1; % isentropic work
+    
+        dw = dw_s/eta; % actual work
+        setState_HP(w, [h1+dw, p]) % actual new state of steam 
+        total_w = total_w + dw; % sum all steps
+    end
+    H = enthalpy_mass(w);
+end
+
+function [total_w, H, X] = turb_work(eta, Pin, Pout, h0)
+    w = Water;
+    set(w, "H", h0, "P", Pin) % Initial Conditions of water
+    n = 100; % discretization points for pressure
+    h = (Pout-Pin)/n; % integration step
+    total_w = 0; % total work output of turbine
+    for p = Pin+h:h:Pout
+        h1 = enthalpy_mass(w);
+        s0 = entropy_mass(w);
+        setState_SP(w, [s0, p]) % isentropic expansion
+        h2 = enthalpy_mass(w);
+        dw_s = h2-h1; % isentropic work
+    
+        dw = dw_s*eta; % actual work
+        setState_HP(w, [h1+dw, p]) % actual new state of steam 
+        total_w = total_w + dw; % sum all steps
+    end
+    X = vaporFraction(w);
+    H = enthalpy_mass(w);
+end
 
 
