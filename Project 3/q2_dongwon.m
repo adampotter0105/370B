@@ -310,15 +310,15 @@ X_des_list      = [X_des_fuel_comp X_des_air_comp X_des_premixer X_des_combustor
 % hold off
 
 % Internal Version
-plot(1:3,[Xf1_int Xf2_int Xm3_int]./(1e6*mdot_fuel), "ro-")
-hold on
-plot(1:3,[Xa1_int Xa2_int Xm3_int]./(1e6*mdot_fuel), "bo-")
-plot(3:5,[Xm3_int Xm4_int Xm5_int]./(1e6*mdot_fuel), "go-")
-legend(["Fuel", "Air", "Mix"])
-xlabel("Station")
-ylabel("Internal Fuel-Specific Exergy [MJ/kg-fuel]")
-improvePlot
-hold off
+% plot(1:3,[Xf1_int Xf2_int Xm3_int]./(1e6*mdot_fuel), "ro-")
+% hold on
+% plot(1:3,[Xa1_int Xa2_int Xm3_int]./(1e6*mdot_fuel), "bo-")
+% plot(3:5,[Xm3_int Xm4_int Xm5_int]./(1e6*mdot_fuel), "go-")
+% legend(["Fuel", "Air", "Mix"])
+% xlabel("Station")
+% ylabel("Internal Fuel-Specific Exergy [MJ/kg-fuel]")
+% improvePlot
+% hold off
 
 %Exergy Destruction Plot
 X_bar = categorical({'Fuel \n Compressor', 'Air \n Compressor', 'Premixer', 'Combustor', 'Turbine', 'Exhaust'});
@@ -326,8 +326,9 @@ X_bar = reordercats(X_bar,{'Fuel \n Compressor', 'Air \n Compressor', 'Premixer'
 bar(X_bar, X_des_list)
 xlabel("Conversion Device")
 ylabel("Flow Exergy Loss [%]")
-text(1,30,['LHV Efficiency: ' string(Eff_gas_turbine)])
-text(1,20,['Exergy Efficiency: ' string(Eff_exergy)])
+text(1,30,['LHV Efficiency [%]: ' string(floor(Eff_gas_turbine*1000)/10)])
+text(1,20,['Exergy Efficiency [%]: ' string(ceil(Eff_exergy*1000)/10)])
+improvePlot
 
 
 
