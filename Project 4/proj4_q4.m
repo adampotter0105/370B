@@ -145,7 +145,7 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
     ih2 = speciesIndex(gas,'H2');
     io2 = speciesIndex(gas,'O2');
     in2 = speciesIndex(gas,'N2');
-    ih20 = speciesIndex(gas, 'H20');
+    ih2o = speciesIndex(gas, 'H2O');
     ico2 = speciesIndex(gas, 'CO2');
     
     % C-H2O ratio assumed to be 1
@@ -154,31 +154,39 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
     x(io2,1) = (OC_fuel + OC_feed)/2; % O from fuel and air
     x(in2,1) = (OC_feed)*3.76/2;
     X_in = x;
+    mass_tot = [28 2 16 14]*[x(ico,1) x(ih2,1) x(io2,1) x(in2,1)]';
+    mass_frac_fuel = (  (1)*12 + (HC_fuel/2)*2 +  (OC_fuel/2)*16  )/mass_tot;
+    mass_frac_air_water = ( (OC_feed/2)*16 + (OC_feed*3.76/2)*14 + 1*18 )/mass_tot;
 
     % Setting up gas with raw elements
+    mass_fuel = 12*1 + 1*HC_fuel + 8*OC_fuel;
     % Enthalpy contribution from fuel
-    comb = Solution('gasification_small.xml'); % Enthalpy of combustion products
     x_comb = zeros(nsp,1); 
     x_comb(ico2,1) = 1;
     x_comb(ih2o,1) = HC_fuel/2;
-    set(comb, 'T', 298, 'P', oneatm, 'X', x_comb);
-    h_comb_products = enthalpy_mass(comb); 
-    o = Oxygen; % Enthalpy of oxygen input
-    set(o, 'T', 298, 'P', oneatm); % TODO: finish converting LHV to enthalpy
-    h_o2 = enthalpy_mass(o);
-    h_fuel = LHV*1e6 - h_comb_products;
+    mass_frac_comb = (44*x_comb(ico2,1) + 18*x_comb(ih2o,1)  )/mass_fuel;
+    set(gas, 'T', 298, 'P', oneatm, 'X', x_comb);
+    h_comb_products = enthalpy_mass(gas); 
+    % Enthalpy of oxygen input
+    x_o2 = zeros(nsp,1); 
+    x_o2(io2,1) = 1;
+    mass_frac_o2 = (2*1 + 0.5*HC_fuel - OC_fuel)*16/mass_fuel; % o2 needed to combust 1 carbon worth of fuel
+    set(gas, 'T', 298, 'P', oneatm, 'X', x_o2); % TODO: finish converting LHV to enthalpy
+    h_o2 = enthalpy_mass(gas);
+    h_fuel = LHV*1e6 + mass_frac_comb*h_comb_products - mass_frac_o2*h_o2; % fuel + air = LHV + products
+
     % Get enthalpy contribution from water and air
-    aw = Solution('gasification_small.xml');
     x_aw = zeros(nsp,1); 
     x_aw(io2,1) = OC_feed/2;
     x_aw(in2,1) = (OC_feed)*3.76/2;
     x_aw(ih2o) = 1;
-    set(aw, 'T', T0, 'P', P0, 'X', x_aw);
-    h_air_water = enthalpy_mass(aw); % TODO: balance intensive enthalpies with masses
+    set(gas, 'T', T0, 'P', P0, 'X', x_aw);
+    h_air_water = enthalpy_mass(gas); 
+    
+    h_in = mass_frac_fuel*h_fuel + mass_frac_air_water*h_air_water; % h_fuel at STP
+    %actual enthalpy_mass of methane: -4.6493e+06
 
-    h_in = h_fuel + h_air_water; % h_fuel 
-
-    set(gas,'H',h_in,'P',P0,'X',x)
+    set(gas,'H',h_in,'P',P0,'X',X_in)
     equilibrate(gas,'HP'); % autothermal reformer
     T_out = temperature(gas); % temperature at equilibrium (K)
     X_out = moleFractions(gas); % mole fractions at equilibrium
