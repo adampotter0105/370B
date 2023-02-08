@@ -44,10 +44,10 @@ end
 %% CALCULATE INDIRECT
 % Set target fuel values
 % [methane, methanol, gasoline]
-HC_fuels = [4 4 1.95]; % TODO: Find real values !!!!!!!!
-OC_fuels = [0 1/6 0];
-LHV_fuels = [50 19.9 43.4]; % MJ/kg  (engineering toolbox)
-Cp_fuels = [3.6 3.62 3.6]; % 
+HC_fuels = [4 4 2]; % TODO: Find real values !!!!!!!!
+OC_fuels = [0 1 0];
+LHV_fuels = [50 19.9 43.4]*1e6; % J/kg  (engineering toolbox)
+Cp_fuels = [2.9 6 2.22]*1e3; % J/kg*K
 nFuels = max(size(HC_fuels));
 
 % Initilize Data Logging Variables
@@ -75,6 +75,7 @@ xlabel('Oxygen/Carbon Molar Feed Ratio');
 ylabel('Equilibrium Temperature (°C)');
 legend(["Direct CH4", "Indirect CH4"])
 xticks([0 0.2 0.4 0.6 0.8 1.0]);
+improvePlot
 hold off
 
 % Compare fuels: Plot temperature vs. O/C molar feed ratio
@@ -87,6 +88,7 @@ xlabel('Oxygen/Carbon Molar Feed Ratio');
 ylabel('Equilibrium Temperature (°C)');
 legend(["Methane", "Methanol", "Gasoline"])
 xticks([0 0.2 0.4 0.6 0.8 1.0]);
+improvePlot
 hold off
 
 % Only plot species with over 0.1% mole fraction
@@ -97,27 +99,45 @@ hold off
 
 % TODO: FIX LEGENDS!!!
 % Plot major species vs. O/C molar feed ratio
+plot_colors = ['b' 'g' 'k' 'c' 'm' 'r'];
+
 figure(3)
 hold on
-plot(OCR,Xeq_direct_maj, "-");
-plot(OCR,Xeq_indirect_maj1, "--");
+for i = 1:size(Xeq_direct_maj,1)
+    p1 = plot(OCR,Xeq_direct_maj(i,:), "-", 'Color', plot_colors(i));
+end
+for i = 1:size(Xeq_indirect_maj1,1)
+    p2 = plot(OCR,Xeq_indirect_maj1(i,:), "--", 'Color', plot_colors(i));
+end
 xlabel('Oxygen/Carbon Molar Feed Ratio');
 ylabel('Equilibrium Mole Fraction');
-legend(["Direct CH4", "Indirect CH4"])
-xticks([0 0.2 0.4 0.6 0.8 1.0]);
 legend(species_direct)
+text(0.8, 0.4, 'Direct: -', "FontSize",15)
+text(0.8, 0.35, 'Indirect: ---', "FontSize",15)
+xticks([0 0.2 0.4 0.6 0.8 1.0]);
+improvePlot
 hold off
 
 figure(4)
 hold on
-plot(OCR,Xeq_indirect_maj1, "-");
-plot(OCR,Xeq_indirect_maj2, "--");
-plot(OCR,Xeq_indirect_maj3, ".");
+for i = 1:size(Xeq_indirect_maj2,1)
+    p3 = plot(OCR,Xeq_indirect_maj1(i,:), "-", 'Color', plot_colors(i));
+end
+for i = 1:size(Xeq_indirect_maj2,1)
+    p4 = plot(OCR,Xeq_indirect_maj2(i,:), "--", 'Color', plot_colors(i));
+end
+for i = 1:size(Xeq_indirect_maj3,1)
+    p5 = plot(OCR,Xeq_indirect_maj3(i,:), ".", 'Color', plot_colors(i));
+end
 xlabel('Oxygen/Carbon Molar Feed Ratio');
 ylabel('Equilibrium Mole Fraction');
-legend(["Methane", "Methanol", "Gasoline"])
+legend(species_indirect1)
+text(0.8, 0.4, 'Methane: -', "FontSize",15)
+text(0.8, 0.35, 'Methanol: --', "FontSize",15)
+text(0.8, 0.3, 'Gasoline: ...', "FontSize",15)
 xticks([0 0.2 0.4 0.6 0.8 1.0]);
 legend(species_indirect3)
+improvePlot
 hold off
 
 function [Xeq_major, species_names_maj] = majSpecies(X_in, species_names)
@@ -141,55 +161,62 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
     x = zeros(nsp,1); % intialize matrix to store mole fraction data
 
     % Find species indices
-    ico = speciesIndex(gas,'CO');
+    ich4 = speciesIndex(gas,'CH4');
     ih2 = speciesIndex(gas,'H2');
     io2 = speciesIndex(gas,'O2');
     in2 = speciesIndex(gas,'N2');
     ih2o = speciesIndex(gas, 'H2O');
     ico2 = speciesIndex(gas, 'CO2');
-    
-    % C-H2O ratio assumed to be 1
-    x(ico,1) = 1.0; % C with O from water
-    x(ih2,1) = HC_fuel/2 + 1; % including H from water
-    x(io2,1) = (OC_fuel + OC_feed)/2; % O from fuel and air
-    x(in2,1) = (OC_feed)*3.76/2;
-    X_in = x;
-    mass_tot = [28 2 16 14]*[x(ico,1) x(ih2,1) x(io2,1) x(in2,1)]';
-    mass_frac_fuel = (  (1)*12 + (HC_fuel/2)*2 +  (OC_fuel/2)*16  )/mass_tot;
-    mass_frac_air_water = ( (OC_feed/2)*16 + (OC_feed*3.76/2)*14 + 1*18 )/mass_tot;
 
     % Setting up gas with raw elements
-    mass_fuel = 12*1 + 1*HC_fuel + 8*OC_fuel;
-    % Enthalpy contribution from fuel
+    % C-H2O ratio assumed to be 1
+    x(ich4,1) = 1.0; % C with O from water
+    x(ih2,1) = (HC_fuel + 2 - 4)/2; % including H from water and fuel
+    if x(ih2,1) < 0
+        fprintf("ERROR: H2O value is negative, check H_C ratio is over 2")
+    end
+    x(io2,1) = (OC_fuel + 1)/2 + OC_feed ; % O from fuel and air
+    x(in2,1) = (OC_feed)*3.76;
+    X_in = x;
+    mass_tot = [16 2 32 28]*[x(ich4,1) x(ih2,1) x(io2,1) x(in2,1)]'; % g/mol fuel normalized by C
+    mass_frac_fuel = (  (1)*12 + (HC_fuel/2)*2 +  (OC_fuel/2)*32  )/mass_tot;
+    mass_frac_air_water = ( OC_feed*32 + (OC_feed*3.76)*28 + 1*18 )/mass_tot;
+
+    % Inverting the LHV Function
+    mass_fuel = 12*1 + 1*HC_fuel + 16*OC_fuel; % g/mol fuel normalized by C
+    % Find Enthalpy contribution from fuel
+    % Enthalpy of combustion products at STP
     x_comb = zeros(nsp,1); 
     x_comb(ico2,1) = 1;
     x_comb(ih2o,1) = HC_fuel/2;
-    mass_frac_comb = (44*1 + 18*(HC_fuel/2)  )/mass_fuel;
-    set(gas, 'T', 298, 'P', oneatm, 'X', x_comb);
-    h_comb_products = enthalpy_mass(gas); 
-    % Enthalpy of oxygen input
+    mass_frac_comb = (44*1 + 18*(HC_fuel/2)  )/mass_fuel; % kg products/ kg fuel
+    set(gas, 'T', 273, 'P', oneatm, 'X', x_comb);
+    h_comb_products = enthalpy_mass(gas);
+    % Enthalpy of oxygen input to fuel combustion
     x_o2 = zeros(nsp,1); 
     x_o2(io2,1) = 1;
-    mass_frac_o2 = (2*1 + 0.5*HC_fuel - OC_fuel)*16/mass_fuel; % o2 needed to combust 1 carbon worth of fuel
-    set(gas, 'T', 298, 'P', oneatm, 'X', x_o2); % TODO: finish converting LHV to enthalpy
+    mass_frac_o2 = (2*1 + 0.5*HC_fuel - OC_fuel)*16/mass_fuel; % kg oxygen/ kg fuel
+    set(gas, 'T', 273, 'P', oneatm, 'X', x_o2); 
     h_o2 = enthalpy_mass(gas);
-    h_fuel = LHV*1e6 + mass_frac_comb*h_comb_products - mass_frac_o2*h_o2; % fuel + air = LHV + products
-
+    h_fuel = LHV + mass_frac_comb*h_comb_products - mass_frac_o2*h_o2; % fuel + air = LHV + products
+    %h_error_lhv = -4.7052e+06/h_fuel % Real value
+    h_fuel = h_fuel + Cp*(T0 - 298);
+    %h_error_cp = -3.4e6/h_fuel
+    %actual enthalpy_mass of methane: -4.6493e+06
+    
     % Get enthalpy contribution from water and air
     x_aw = zeros(nsp,1); 
-    x_aw(io2,1) = OC_feed/2;
-    x_aw(in2,1) = (OC_feed)*3.76/2;
+    x_aw(io2,1) = OC_feed;
+    x_aw(in2,1) = (OC_feed)*3.76;
     x_aw(ih2o) = 1;
     set(gas, 'T', T0, 'P', P0, 'X', x_aw);
-    h_air_water = enthalpy_mass(gas); 
+    h_air_water = enthalpy_mass(gas);
     
     h_in = mass_frac_fuel*h_fuel + mass_frac_air_water*h_air_water; % h_fuel at STP
-    h_in = h_in + Cp*(T0 - 298) % Add sensible heat
-    %actual enthalpy_mass of methane: -4.6493e+06
-    set(gas,'T',T0,'P',P0,'X',X_in);
-    enthalpy_mass(gas)
-    equilibrate(gas, 'TP');
-    set(gas,'H',h_in,'P',P0,'X',X_in)
+
+    set(gas,'T',T0,'P',P0,'X',X_in); % remove
+    X_in2 = moleFractions( equilibrate(gas, 'TP') );
+    set(gas,'H',h_in,'P',P0,'X',X_in2)
     equilibrate(gas,'HP'); % autothermal reformer
     T_out = temperature(gas); % temperature at equilibrium (K)
     X_out = moleFractions(gas); % mole fractions at equilibrium
