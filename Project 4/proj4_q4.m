@@ -164,7 +164,7 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
     x_comb = zeros(nsp,1); 
     x_comb(ico2,1) = 1;
     x_comb(ih2o,1) = HC_fuel/2;
-    mass_frac_comb = (44*x_comb(ico2,1) + 18*x_comb(ih2o,1)  )/mass_fuel;
+    mass_frac_comb = (44*1 + 18*(HC_fuel/2)  )/mass_fuel;
     set(gas, 'T', 298, 'P', oneatm, 'X', x_comb);
     h_comb_products = enthalpy_mass(gas); 
     % Enthalpy of oxygen input
@@ -184,8 +184,11 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
     h_air_water = enthalpy_mass(gas); 
     
     h_in = mass_frac_fuel*h_fuel + mass_frac_air_water*h_air_water; % h_fuel at STP
+    h_in = h_in + Cp*(T0 - 298) % Add sensible heat
     %actual enthalpy_mass of methane: -4.6493e+06
-
+    set(gas,'T',T0,'P',P0,'X',X_in);
+    enthalpy_mass(gas)
+    equilibrate(gas, 'TP');
     set(gas,'H',h_in,'P',P0,'X',X_in)
     equilibrate(gas,'HP'); % autothermal reformer
     T_out = temperature(gas); % temperature at equilibrium (K)
