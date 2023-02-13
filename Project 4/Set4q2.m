@@ -2,6 +2,31 @@
 
 clc;
 
+global mu_o To Po xo
+
+gas = Solution('gasification_small.xml'); % set mechanism
+nsp = nSpecies(gas); % number of species in mechanism
+
+% Find species indices
+ico2 = speciesIndex(gas,'CO2');
+ih2o = speciesIndex(gas,'H2O');
+io2 = speciesIndex(gas,'O2');
+in2 = speciesIndex(gas,'N2');
+ico = speciesIndex(gas,'CO');
+iar = speciesIndex(gas,'AR');
+
+% dead state
+To = 298.15;
+Po = 101325;
+xo = zeros(1,nsp);
+xo(in2)  = 0.757223;
+xo(io2)  = 0.202157;
+xo(ih2o) = 0.031208;
+xo(iar)  = 0.009015;
+xo(ico2) = 0.000397;
+set(gas,'T',To,'P',Po,'X',xo);
+mu_o = chemPotentials(gas);
+
 pts = 100;
 OCratio = linspace(0,1,pts);
 WCratio = linspace(0,3,pts);
@@ -73,11 +98,12 @@ xlabel('Oxygen/Carbon Molar Feed Ratio');
 ylabel('Water/Carbon Molar Feed Ratio');
 title('CO_2 Mole Fraction');
 
-% figure(6)
-% contour(OCratio,WCratio,Xeff);
-% xlabel('Oxygen/Carbon Molar Feed Ratio');
-% ylabel('Water/Carbon Molar Feed Ratio');
-% title('Exergy Efficiency (%)');
+figure(6)
+[C,h] = contour(OCratio,WCratio,Xeff);
+clabel(C,h);
+xlabel('Oxygen/Carbon Molar Feed Ratio');
+ylabel('Water/Carbon Molar Feed Ratio');
+title('Exergy Efficiency (%)');
 
 figure(7)
 [C,h] = contour(OCratio,WCratio,CGE);
@@ -92,6 +118,13 @@ clabel(C,h);
 xlabel('Oxygen/Carbon Molar Feed Ratio');
 ylabel('Water/Carbon Molar Feed Ratio');
 title('Molar Syngas Yield (CO+H_2)/CH_4');
+
+figure(9)
+[C,h] = contour(OCratio,WCratio,Teq);
+clabel(C,h);
+xlabel('Oxygen/Carbon Molar Feed Ratio');
+ylabel('Water/Carbon Molar Feed Ratio');
+title('Equilibrium Temperature (K)');
 
 function [temp, spec, specnames, cge, exer, synyield] = Methane_ATR(OCrat, WCrat)
 
@@ -108,20 +141,6 @@ function [temp, spec, specnames, cge, exer, synyield] = Methane_ATR(OCrat, WCrat
     in2 = speciesIndex(gas,'N2');
     ico = speciesIndex(gas,'CO');
     ih2 = speciesIndex(gas,'H2');
-
-%     nOCR = 100; % number of O/C ratio points
-%     OCR = linspace(0,1.0,nOCR); % O/C ratio range
-%     Xin(nsp) = 0; % initialize matrix to store initial mole fractions
-%     Teq = 0; % initialize vector to store temperature at equilibrium
-%     Xeq(nsp) = 0; % intialize matrix to store mole fractions at equilibrium
-%     LHVin = 0; % initialize vector to store LHV before reforming
-%     LHVout = 0; % initilize vector to store LHV after reforming
-%     Yin(nsp) = 0; % initialize matrix to store mass fractions before reforming
-%     Yout(nsp) = 0; % initialize matrix to store mass fractions after reforming
-%     EXin = 0; % initialize vector to store exergy going in
-%     EXout = 0; % initialize vector to store exergy going in
-%     MWin = 0; % intialize vector to store molecular weights going in
-%     MWout = 0; % initialize vector to store molecular weights going out
 
     x = zeros(nsp,1); % intialize matrix to store mole fraction data
     % set mole fractions
@@ -150,13 +169,7 @@ function [temp, spec, specnames, cge, exer, synyield] = Methane_ATR(OCrat, WCrat
         species_names(i) = speciesName(gas,i); % get list of species names
     end
 
-    Xeq_major = Xeq; % store major species only
-%     for n = nsp:-1:1
-%         if Xeq_major(n,nOCR/2) < 0.001 % get equilibrium composition at midpoint
-%             Xeq_major(n,:) = []; % delete rows
-%             species_names(n) = [];
-%         end
-%     end
+    Xeq_major = Xeq; 
 
     % Calculate cold-gas efficiency, exergy efficiency, and syngas yield
     
@@ -313,13 +326,9 @@ end
 function x = flowExergy_mass(fluid)
     % Return the specific flow exergy of the fluid (J/kg);
 
-    % global To Po mu_o
+    global To Po mu_o
     global g_tm
-    To = 298.15;
-    Po = 101325;
-    mu_o = chemPotentials(fluid);
     
-
     % If g_tm did not get declared outside of this routine, force its
     % calculation.
     if isempty(g_tm)
