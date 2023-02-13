@@ -44,10 +44,11 @@ end
 %% CALCULATE INDIRECT
 % Set target fuel values
 % [methane, methanol, gasoline]
-HC_fuels = [4 4 2]; % TODO: Find real values !!!!!!!!
+HC_fuels = [4 4 1.87]; % TODO: Find real values !!!!!!!!
 OC_fuels = [0 1 0];
-LHV_fuels = [50 19.9 43.4]*1e6; % J/kg  (engineering toolbox)
-Cp_fuels = [2.9 6 2.22]*1e3; % J/kg*K
+LHV_fuels = [50 20 44]*1e6; % J/kg  (engineering toolbox)
+Cp_fuels = [2.9 1.72 1.7]*1e3; % J/kg*K
+latent = [0 1103 350]*1e3;
 nFuels = max(size(HC_fuels));
 
 % Initilize Data Logging Variables
@@ -57,7 +58,7 @@ Teq_indirect(nFuels, nOCR) = 0;
 
 for f = 1:nFuels
     for ocr = 1:nOCR
-        [X_in, X_out, T_out] = SMR(HC_fuels(f), OC_fuels(f), OCR(ocr), LHV_fuels(f), Cp_fuels(f));
+        [X_in, X_out, T_out] = SMR(HC_fuels(f), OC_fuels(f), OCR(ocr), LHV_fuels(f), Cp_fuels(f), latent(f));
         Xin_indirect(f,:,ocr) = X_in;
         Xeq_indirect(f,:,ocr) = X_out;
         Teq_indirect(f,ocr)= T_out;
@@ -136,7 +137,6 @@ text(0.8, 0.4, 'Methane: -', "FontSize",15)
 text(0.8, 0.35, 'Methanol: --', "FontSize",15)
 text(0.8, 0.3, 'Gasoline: ...', "FontSize",15)
 xticks([0 0.2 0.4 0.6 0.8 1.0]);
-legend(species_indirect3)
 improvePlot
 hold off
 
@@ -147,21 +147,21 @@ function [Xeq_major, species_names_maj] = majSpecies(X_in, species_names)
     Xeq_major = X_in; % store major species only
     species_names_maj = species_names;
     for n = nsp:-1:1
-        if Xeq_major(n,nOCR/2) < 0.001 % get equilibrium composition at midpoint
+        if Xeq_major(n,floor(nOCR/3)) < 0.001 % get equilibrium composition at midpoint
             Xeq_major(n,:) = []; % delete rows
             species_names_maj(n) = [];
         end
     end
 end
 
-function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
+function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp, latent)
     global T0 P0
     gas = Solution('gasification_small.xml');
     nsp = nSpecies(gas); % number of species in gas
     x = zeros(nsp,1); % intialize matrix to store mole fraction data
 
     % Find species indices
-    ich4 = speciesIndex(gas,'CH4');
+    ico = speciesIndex(gas,'CO');
     ih2 = speciesIndex(gas,'H2');
     io2 = speciesIndex(gas,'O2');
     in2 = speciesIndex(gas,'N2');
@@ -170,15 +170,12 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
 
     % Setting up gas with raw elements
     % C-H2O ratio assumed to be 1
-    x(ich4,1) = 1.0; % C with O from water
-    x(ih2,1) = (HC_fuel + 2 - 4)/2; % including H from water and fuel
-    if x(ih2,1) < 0
-        fprintf("ERROR: H2O value is negative, check H_C ratio is over 2")
-    end
-    x(io2,1) = (OC_fuel + 1)/2 + OC_feed ; % O from fuel and air
+    x(ico,1) = 1.0; % C with O from water
+    x(ih2,1) = (HC_fuel + 2)/2; % including H from water and fuel
+    x(io2,1) = OC_fuel/2 + OC_feed ; % O from fuel and air
     x(in2,1) = (OC_feed)*3.76;
     X_in = x;
-    mass_tot = [16 2 32 28]*[x(ich4,1) x(ih2,1) x(io2,1) x(in2,1)]'; % g/mol fuel normalized by C
+    mass_tot = [28 2 32 28]*[x(ico,1) x(ih2,1) x(io2,1) x(in2,1)]'; % g/mol fuel normalized by C
     mass_frac_fuel = (  (1)*12 + (HC_fuel/2)*2 +  (OC_fuel/2)*32  )/mass_tot;
     mass_frac_air_water = ( OC_feed*32 + (OC_feed*3.76)*28 + 1*18 )/mass_tot;
 
@@ -200,7 +197,7 @@ function [X_in, X_out, T_out] = SMR(HC_fuel, OC_fuel, OC_feed, LHV, Cp)
     h_o2 = enthalpy_mass(gas);
     h_fuel = LHV + mass_frac_comb*h_comb_products - mass_frac_o2*h_o2; % fuel + air = LHV + products
     %h_error_lhv = -4.7052e+06/h_fuel % Real value
-    h_fuel = h_fuel + Cp*(T0 - 298);
+    h_fuel = h_fuel + Cp*(T0 - 298) + latent;
     %h_error_cp = -3.4e6/h_fuel
     %actual enthalpy_mass of methane: -4.6493e+06
     
