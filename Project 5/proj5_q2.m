@@ -8,7 +8,7 @@ fprintf('\n************************************************************\n')
 
 % Input Conditions
 Tin = 150 + 273.15;
-Pin = 55*oenatm;
+Pin = 55*oneatm;
 
 % Get the species.
 gas  = Solution('gasification_small.xml');
@@ -95,11 +95,19 @@ for i = 1:n_o2c
     mdot_mois= mdot_maf*Water/(Fix_C+Vol_matter); % mol of water in af coal per second
     ndot_mois= mdot_mois/18; % moles of water per second
 
+    % IL #6 Ash content:  Sio2: 47.5, Al2O3: 17.9, TiO2: 0.8, Fe2O3: 20.1, 
+    % CaO:5.8, MgO: 1, Na2O: 0.4, K2O: 1.8, SO3: 4.6, P2O5: 0.1
+    ash_content = [47.5, 17.9, 0.8, 20.1, 5.8, 1, 0.4, 1.8, 4.6, 0.1]*1e-2;
+    ash_species_mm = [60 102 80 160 56 40.3 62 94.2 80.6 283.9];
+    ash_o_species = [2 3 2 3 1 1 1 1 3 5];
+    mdot_o_ash =  sum(ash_o_species*16.*ash_content) / sum(ash_content.*ash_species_mm); % kg oxygen per kg of ash for slag to oxidize
+    ndot_o2_ash = mdot_o_ash/32; % mol of O2 per kg of ash
+
     % number of mole of product gases
     Nin2        = zeros(Nsp,1);
     Nin2(iCO)   = 1 * num_C;
     Nin2(iH2)   = 0.5 * num_H;
-    Nin2(iH2O)  = Nin1_H2O + ndot_mois;
+    Nin2(iH2O)  = Nin1_H2O;
     Nin2(iSO2)  = 1 * num_S;
     Nin2(iN2)   = Nin1_N2 + 1*0.5*num_N;
     Nin2(iO2)   = Nin1_O2 + 1*0.5*num_O - 0.5*Nin2(iCO) - 1*Nin2(iSO2);
@@ -109,9 +117,7 @@ for i = 1:n_o2c
         Nin2(iO2)  = 0;
     end
    
-    mdot_syngas   = Nin2(iCO)*Mm(iCO) + Nin2(iH2)*Mm(iH2) + Nin2(iH2O)*Mm(iH2O) + Nin2(iSO2)*Mm(iSO2) + Nin2(iN2)*Mm(iN2) + Nin2(iO2)*Mm(iO2);
-    Min2_syngas   = mdot_syngas;
-    
+
     % Use Cantera to find the enthalpies of the product gases for the
     % heating value problem.
     set(gas,'T',25+273.15,'P',oneatm,'X','CO2:1');
@@ -121,10 +127,11 @@ for i = 1:n_o2c
     set(gas,'T',25+273.15,'P',oneatm,'X','SO2:1');
     hbar_SO2 = enthalpy_mole(gas);
     
+    % TODO: contest this LHV inversion
+
     % Data for input Coal             
     Qlhv = 32.1e6;                 % LHV is known for input coal, J/kg
-    Cp_mf    = 0.7e3;                  % Cp is known, J/kg-K
-    Cp    = Cp_mf;
+    Cp    = 0.7e3;                  % Cp is known, J/kg-K
 
     % Finish Inverting LHV Problem: Enthalpy for input coal
     h_maf = num_C*hbar_CO2/M_maf + num_H/2*hbar_H2O/M_maf + num_S*hbar_SO2/M_maf + Qlhv;
@@ -141,12 +148,12 @@ for i = 1:n_o2c
     h_N2_Tin = enthalpy_mole(gas);
     
     %% Ash and Slag Properties
-    Tm      = 1350; % [oC]
+    %Tm      = 1350; % [oC]
     Cp_slag = 1e3; % J/kg*K
     Cp_ash  = 1e3; % J/kg*K
     hfg_ash = 240e3; % J/kg
-    reducing_T = 1270+273.15;  % [oC]
-    oxidizing_T = 1430+273.15; % [oC]
+    reducing_T = 1270;  % [oC] % TODO: understand what these are
+    oxidizing_T = 1430; % [oC]
     
     %% Find Equillibrium temperature Iteratively
 
@@ -154,13 +161,34 @@ for i = 1:n_o2c
     T_predicted_max=2500;
     while (1)
         T_predicted_avg = (T_predicted_max + T_predicted_min)/2; % bisection search
-        if T_predicted_avg<Tm         %%%%%%%%%% T
-            h_slag_delta = Cp_ash*(T_predicted_avg-25);  % ash not melted
-        else
-            h_slag_delta = Cp_ash*(Tm-25) + hfg_ash + Cp_slag*(T_predicted_avg-Tm); % ash melted
+        
+        % Reset H2 and H2O values
+        Nin2(iH2)   = 0.5 * num_H;
+        Nin2(iH2O)  = Nin1_H2O;
+
+        % Account for ash/slag
+        if T_predicted_avg<reducing_T    % ash not melted
+            Nin2(iO2)  = Nin1_O2 + 1*0.5*num_O - 0.5*Nin2(iCO) - 1*Nin2(iSO2);
+            h_slag_delta = Cp_ash*(T_predicted_avg-25); 
+        elseif T_predicted_avg>reducing_T && T_predicted_avg<oxidizing_T % ash melted
+            Nin2(iO2)   = Nin1_O2 + 1*0.5*num_O - 0.5*Nin2(iCO) - 1*Nin2(iSO2);
+            h_slag_delta = Cp_ash*(reducing_T-25) + hfg_ash + Cp_slag*(T_predicted_avg-reducing_T); 
+        else % ash melted and oxidized
+            h_slag_delta = Cp_ash*(reducing_T-25) + hfg_ash + Cp_slag*(T_predicted_avg-reducing_T); 
+            % Adjust for oxidized slag
+            Nin2(iO2)   = Nin1_O2 + 1*0.5*num_O - 0.5*Nin2(iCO) - 1*Nin2(iSO2) - ndot_o2_ash*ash_maf;
         end
-    
-        h_syngas         = mdot_maf/mdot_syngas * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*O2_C*h_N2_Tin/M_maf + (H2O_C)*h_H2O_Tin/M_maf - (ash_maf)*h_slag_delta); %%%%
+
+        % Check oxygen value isn't negative
+        if(Nin2(iO2) < 0)
+                Nin2(iH2O) = Nin2(iH2O) - (-1)*Nin2(iO2)*2;
+                Nin2(iH2)  = Nin2(iH2)  + (-1)*Nin2(iO2)*2;
+                Nin2(iO2)  = 0;
+        end
+
+        mdot_syngas   = Nin2(iCO)*Mm(iCO) + Nin2(iH2)*Mm(iH2) + Nin2(iH2O)*Mm(iH2O) + Nin2(iSO2)*Mm(iSO2) + Nin2(iN2)*Mm(iN2) + Nin2(iO2)*Mm(iO2);
+
+        h_syngas = mdot_maf/mdot_syngas * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*O2_C*h_N2_Tin/M_maf + (H2O_C)*h_H2O_Tin/M_maf - (ash_maf)*h_slag_delta); %%%%
     
         % Use the syngas composition and backwards-computed enthalpy to find the
         % equilibrium state.
@@ -168,28 +196,27 @@ for i = 1:n_o2c
         equilibrate(gas,'TP');                  % This can soothe a cranky Cantera.
         set(gas,'H',h_syngas,'P',Pin);  % Set the correct state.
         equilibrate(gas,'HP');                  % Equilibrate for real.
-        ToutC(i)  = temperature(gas) - 273.15;
-        xout(:,i) = moleFractions(gas);
+        ToutC  = temperature(gas) - 273.15;
+        xout = moleFractions(gas);
         
 
-        if abs(ToutC(i)-T_predicted_avg)>0.1 % Not within error
-            if ToutC(i)>T_predicted_avg
+        if abs(ToutC-T_predicted_avg)>0.1 % Not within error
+            if ToutC>T_predicted_avg
                 T_predicted_min = T_predicted_avg; % Change max and min values accordingly
             else
                 T_predicted_max = T_predicted_avg;
             end
         else
-            Temp_data
-            Species_data
-            CGE_data
-            Syngas_yield_data
+            Temp_data(i,j) = ToutC;
+            Species_data(i,j,:) = xout;
+            %CGE_data TODO: write these metrics
+            %Syngas_yield_data
             break % T_predicted_avg within 0.1 C, exit loop
         end
     end
 
-    i = i+1;
 end
-    j = j+1;
+   fprintf("Iteration %d out of %d \n", j, n_h2o)   
 end
 
 %% PLOTTING CODE
