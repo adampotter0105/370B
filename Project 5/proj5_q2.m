@@ -37,9 +37,9 @@ iAr  = elementIndex(gas,'AR');
 % around H2O/C of 1:1.
 
 % Operation matrix
-H2OC = 1.5:-0.01:0;
+H2OC = 1.5:-0.02:0;
 n_h2o = size(H2OC,2);
-O2C=0.5:-0.01:0.1;
+O2C=0.5:-0.02:0.1;
 n_o2c = size(O2C,2);
 
 % Initialize Data Storage
@@ -81,8 +81,8 @@ for i = 1:n_o2c
     % Inlet H2O and Air
     Nin1_O2   = O2_C * num_C;
     Nin1_H2O  = H2O_C * num_C;
-    Nin1_N2   = 3.76 * Nin1_O2;
-    N2_C      = 3.76 * O2_C;
+    Nin1_N2   = 0; % 3.76 * Nin1_O2; using neat oxygen
+    N2_C      = 0; % 3.76 * O2_C; using neat oxygen
 
     M_maf     = num_C*Ma(iC) + num_H*Ma(iH) + num_S*Ma(iS) + num_O*Ma(iO) + num_N*Ma(iN);  % [kg maf/ kmol C]
     
@@ -95,30 +95,18 @@ for i = 1:n_o2c
     mdot_mois= mdot_maf*Water/(Fix_C+Vol_matter); % mol of water in af coal per second
     ndot_mois= mdot_mois/18; % moles of water per second
 
-    % IL #6 Ash content:  Sio2: 47.5, Al2O3: 17.9, TiO2: 0.8, Fe2O3: 20.1, 
-    % CaO:5.8, MgO: 1, Na2O: 0.4, K2O: 1.8, SO3: 4.6, P2O5: 0.1
-    ash_content = [47.5, 17.9, 0.8, 20.1, 5.8, 1, 0.4, 1.8, 4.6, 0.1]*1e-2;
-    ash_species_mm = [60 102 80 160 56 40.3 62 94.2 80.6 283.9];
-    ash_o_species = [2 3 2 3 1 1 1 1 3 5];
-    mdot_o_ash =  sum(ash_o_species*16.*ash_content) / sum(ash_content.*ash_species_mm); % kg oxygen per kg of ash for slag to oxidize
-    ndot_o2_ash = mdot_o_ash/32; % mol of O2 per kg of ash
-
     % number of mole of product gases
     Nin2        = zeros(Nsp,1);
     Nin2(iCO)   = 1 * num_C;
-    Nin2(iH2)   = 0.5 * num_H + (Nin1_H2O + ndot_mois);
-    %Nin2(iH2O)  = Nin1_H2O + ndot_mois;
+    Nin2(iH2)   = 0.5 * num_H + (Nin1_H2O);
     Nin2(iSO2)  = 1 * num_S;
     Nin2(iN2)   = Nin1_N2 + 1*0.5*num_N;
-    Nin2(iO2)   = Nin1_O2 + 1*0.5*num_O + 0.5*(Nin1_H2O + ndot_mois) ...
-        - 0.5*Nin2(iCO) - 1*Nin2(iSO2) - ndot_o2_ash*ash_maf*M_maf;
-    
-    flag = 0;
+    Nin2(iO2)   = Nin1_O2 + 1*0.5*num_O + 0.5*(Nin1_H2O) - 0.5*Nin2(iCO) - 1*Nin2(iSO2);
+
+    flag = 0; % Pyrolysis Condition
     if(Nin2(iO2) < 0)
         flag = 1;
-        Nin2(iH2O) = Nin2(iH2O) - (-1)*Nin2(iO2)*2;
-        Nin2(iH2)  = Nin2(iH2)  + (-1)*Nin2(iO2)*2;
-        Nin2(iO2)  = 0;
+        Nin2(iO2) = 0;
     end
    
     mdot_syngas   = Nin2(iCO)*Mm(iCO) + Nin2(iH2)*Mm(iH2) + Nin2(iSO2)*Mm(iSO2) + Nin2(iN2)*Mm(iN2) + Nin2(iO2)*Mm(iO2);
@@ -152,31 +140,25 @@ for i = 1:n_o2c
     set(gas,'T',Tin,'P',oneatm,'X','N2:1');
     h_N2_Tin = enthalpy_mole(gas);
     
-    %% Ash and Slag Properties
-    Tm      = 1350; % [oC]
-    Cp_slag = 1e3; % J/kg*K
-    Cp_ash  = 1e3; % J/kg*K
-    hfg_ash = 240e3; % J/kg
     
     %% Find Equillibrium temperature Iteratively
 
     T_predicted_min=100; % guess
-    T_predicted_max=3000;
-    its = 0;
-    while its < 1e2
+    T_predicted_max=3500;
+
+    while (1)
         T_predicted_avg = (T_predicted_max + T_predicted_min)/2; % bisection search
 
-        % Account for ash/slag
-        if T_predicted_avg<Tm    % ash not melted
-            h_slag_delta = Cp_ash*(T_predicted_avg-25); 
-        else % ash melted and oxidized
-            h_slag_delta = Cp_ash*(Tm-25) + hfg_ash + Cp_slag*(T_predicted_avg-Tm);  
+        %h_syngas = (mdot_maf/mdot_syngas)*(h_maf + (1+ash_maf)*h_mf_delta + Nin1_O2*h_O2_Tin/M_maf + Nin1_N2*h_N2_Tin/M_maf + (Nin1_H2O)*h_H2O_Tin/M_maf ); %%%%
+        h_syngas         = mdot_maf/mdot_syngas * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*h_N2_Tin/M_maf + (H2O_C)*h_H2O_Tin/M_maf); %%%%@@@@@@@@@@@@22
+    
+
+        if flag % pyrolysis condition
+            Temp_data(i,j) = 0;
+            Species_data(i,j,:) = 0;
+            break 
         end
-        
-        h_syngas = (mdot_maf/mdot_syngas)*(h_maf + h_mf_delta + Nin1_O2*h_O2_Tin/M_maf + Nin1_N2*h_N2_Tin/M_maf + Nin1_H2O*h_H2O_Tin/M_maf - (ash_maf)*h_slag_delta); %%%%
-    
-        % h_syngas = mdot_maf/mdot_syngas * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*h_N2_Tin/M_maf + H2O_C*h_H2O_Tin/M_maf - (ash_maf)*h_slag_delta); %%%%
-    
+
         % Use the syngas composition and backwards-computed enthalpy to find the
         % equilibrium state.
         set(gas,'T',300,'P',oneatm,'X',Nin2);   % Pre-equilibrate at low T
@@ -186,17 +168,7 @@ for i = 1:n_o2c
         ToutC  = temperature(gas) - 273.15;
         xout = moleFractions(gas);
 
-        % Track Iterations
-        its = its + 1;
-        if flag == 1
-            break
-        end
-
-        if its == 1e2
-            Temp_data(i,j) = Tm;
-            Species_data(i,j,:) = xout;
-            fprintf("Max iterations reached!! \n")
-        elseif abs(ToutC-T_predicted_avg)>0.1 % Not within error
+        if abs(ToutC-T_predicted_avg)>0.1 % Not within error
             if ToutC>T_predicted_avg
                 T_predicted_min = T_predicted_avg; % Change max and min values accordingly
             else
@@ -215,14 +187,25 @@ end
 
 
 %% Generate CGE and SYngas Yield
+for j = 1:n_h2o
+for i = 1:n_o2c 
+    Syngas_yield_data(i,j) = (Species_data(i,j,iH2) + Species_data(i,j,iCO))/(Species_data(i,j,iCO)+Species_data(i,j,iCO2));
+    CGE_data(i,j) = (Species_data(i,j,iH2) + Species_data(i,j,iCO))/Qlhv;% Fix with enthalpies fo hydrogen and CO
+end
+end
 
-%% PLOTTING CODE
-contour(O2C, H2OC, Temp_data','ShowText','on')
+%% PLOTTING CODE\
+figure(1)
+contour(O2C, H2OC, Temp_data', 600:100:2500,'ShowText','on', 'LineWidth',2)
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
+title("Temperature (C)")
 improvePlot
 
-% contour(O2C, H2OC, Temp_data)
-% xlabel("Oxygen-Carbon Ratio")
-% ylabel("Water-Carbon Ratio")
-% improvePlot
+figure(2)
+contour(O2C, H2OC, Species_data(:,:,iH2)','ShowText','on', 'LineWidth',2)
+xlabel("Oxygen-Carbon Ratio")
+ylabel("Water-Carbon Ratio")
+title("H2 Mole Ratio")
+improvePlot
+
