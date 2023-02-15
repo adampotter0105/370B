@@ -28,7 +28,6 @@ iH   = elementIndex(gas,'H');
 iO   = elementIndex(gas,'O');
 iN   = elementIndex(gas,'N');
 iS   = elementIndex(gas,'S');
-iAr  = elementIndex(gas,'AR');
 
 % Gasify methane using air.  Use molar ratios to specify the oxygen and water to be
 % used.  For complete combustion CH4 + 2O2 -> CO2 + 2H2O so we know that we
@@ -47,7 +46,9 @@ Temp_data(n_o2c,n_h2o) = 0;
 Species_data(n_o2c,n_h2o,Nsp) = 0;
 CGE_data(n_o2c,n_h2o) = 0;
 Syngas_yield_data(n_o2c,n_h2o) = 0;
-
+ratio_C(n_o2c,n_h2o) = 0;
+ratio_coal(n_o2c,n_h2o) = 0;
+mean_weight(n_o2c,n_h2o) = 0;
 
 % Now do the problem backwards.  
 % Make a loop to vary the oxygen-carbon ratio.
@@ -87,7 +88,7 @@ for i = 1:n_o2c
     M_maf     = num_C*Ma(iC) + num_H*Ma(iH) + num_S*Ma(iS) + num_O*Ma(iO) + num_N*Ma(iN);  % [kg maf/ kmol C]
     
     % Mass Flow Rate of Coal
-    mdot_maf = 1*M_maf; % [kmol/s] * [kg/kmol] = [kg/s] of coal
+    mdot_maf = 1*M_maf; % [kmol C/s] * [kg maf/kmol C] = [kg maf/s] of coal
     mdot_ash = mdot_maf*Ash/(Fix_C+Vol_matter);  % kg/s of ash per kg of maf coal
     mdot_mf  = mdot_maf*(Fix_C+Vol_matter+Ash)/(Fix_C+Vol_matter); % kg/s of mf coal
     mdot_slag= mdot_ash; % assuming all ash turns into slag
@@ -97,18 +98,19 @@ for i = 1:n_o2c
 
     % number of mole of product gases
     Nin2        = zeros(Nsp,1);
-    Nin2(iCO)   = 1 * num_C;
-    Nin2(iH2)   = 0.5 * num_H + (Nin1_H2O);
+    Nin2(iCO)   = 1 * num_C; 
+    Nin2(iH2)   = 0.5*num_H + Nin1_H2O; % mol H2/ mol C
     Nin2(iSO2)  = 1 * num_S;
-    Nin2(iN2)   = Nin1_N2 + 1*0.5*num_N;
-    Nin2(iO2)   = Nin1_O2 + 1*0.5*num_O + 0.5*(Nin1_H2O) - 0.5*Nin2(iCO) - 1*Nin2(iSO2);
-
+    Nin2(iN2)   = Nin1_N2 + 0.5*num_N;
+    Nin2(iO2)   = Nin1_O2 + 0.5*num_O + 0.5*(Nin1_H2O) - 0.5*Nin2(iCO) - 1*Nin2(iSO2);
+   
     flag = 0; % Pyrolysis Condition
     if(Nin2(iO2) < 0)
         flag = 1;
         Nin2(iO2) = 0;
     end
    
+    % Unit [kg/mol C]
     mdot_syngas   = Nin2(iCO)*Mm(iCO) + Nin2(iH2)*Mm(iH2) + Nin2(iSO2)*Mm(iSO2) + Nin2(iN2)*Mm(iN2) + Nin2(iO2)*Mm(iO2);
 
     % Use Cantera to find the enthalpies of the product gases for the
@@ -146,14 +148,19 @@ for i = 1:n_o2c
     T_predicted_min=100; % guess
     T_predicted_max=3500;
 
+    Nin2 = Nin2./sum(Nin2); % Normalize
+     
+
     while (1)
         T_predicted_avg = (T_predicted_max + T_predicted_min)/2; % bisection search
 
         %h_syngas = (mdot_maf/mdot_syngas)*(h_maf + (1+ash_maf)*h_mf_delta + Nin1_O2*h_O2_Tin/M_maf + Nin1_N2*h_N2_Tin/M_maf + (Nin1_H2O)*h_H2O_Tin/M_maf ); %%%%
-        h_syngas         = mdot_maf/mdot_syngas * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*h_N2_Tin/M_maf + (H2O_C)*h_H2O_Tin/M_maf); %%%%@@@@@@@@@@@@22
+        h_syngas = (mdot_maf/mdot_syngas) * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*h_N2_Tin/M_maf + (H2O_C)*h_H2O_Tin/M_maf); %%%%@@@@@@@@@@@@22
     
-
         if flag % pyrolysis condition
+            ratio_C(i,j) = 0;
+            ratio_coal(i,j) = 0;
+            mean_weight(i,j) = 0;
             Temp_data(i,j) = 0;
             Species_data(i,j,:) = 0;
             break 
@@ -175,6 +182,9 @@ for i = 1:n_o2c
                 T_predicted_max = T_predicted_avg;
             end  
         else
+            ratio_C(i,j) = Nin2(iCO); % mole fraction of carbon in gas
+            ratio_coal(i,j) = (mdot_maf/mdot_syngas);
+            mean_weight(i,j) = meanMolecularWeight(gas);
             Temp_data(i,j) = ToutC;
             Species_data(i,j,:) = xout;
             break % T_predicted_avg within 0.1 C, exit loop
@@ -187,10 +197,16 @@ end
 
 
 %% Generate CGE and SYngas Yield
+set(gas,'T',Tin,'P',oneatm,'X','N2:1');
+h_N2_Tin = enthalpy_mole(gas);
+
 for j = 1:n_h2o
 for i = 1:n_o2c 
-    Syngas_yield_data(i,j) = (Species_data(i,j,iH2) + Species_data(i,j,iCO))/(Species_data(i,j,iCO)+Species_data(i,j,iCO2));
-    CGE_data(i,j) = (Species_data(i,j,iH2) + Species_data(i,j,iCO))/Qlhv;% Fix with enthalpies fo hydrogen and CO
+    co = Species_data(i,j,iCO);
+    h2 = Species_data(i,j,iH2);
+    Syngas_yield_data(i,j) = (h2 + co)/ratio_C(i,j);
+    % heating values: 120 MJ/kg for hydrogen, 10.16 MJ/kg for CO
+    CGE_data(i,j) = 1e2*(120e6*h2*2 + 10.16e6*co*28) /(Qlhv*ratio_coal(i,j)*mean_weight(i,j));% Fix with enthalpies fo hydrogen and CO
 end
 end
 
@@ -209,3 +225,16 @@ ylabel("Water-Carbon Ratio")
 title("H2 Mole Ratio")
 improvePlot
 
+figure(3)
+contour(O2C, H2OC, CGE_data(:,:)','ShowText','on', 'LineWidth',2)
+xlabel("Oxygen-Carbon Ratio")
+ylabel("Water-Carbon Ratio")
+title("Cold Gas Efficiency (%)")
+improvePlot
+
+figure(4)
+contour(O2C, H2OC, Syngas_yield_data(:,:)','ShowText','on', 'LineWidth',2)
+xlabel("Oxygen-Carbon Ratio")
+ylabel("Water-Carbon Ratio")
+title("Syngas Molar Yield")
+improvePlot
