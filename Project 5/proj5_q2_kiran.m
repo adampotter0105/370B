@@ -6,7 +6,7 @@ fprintf('\n************************************************************\n')
 
 % Input Conditions
 Tin = 150 + 273.15;
-Pin = 55*oneatm;
+Pin = 55*10000;
 
 % Get the species.
 gas  = Solution('gasification_small.xml');
@@ -37,9 +37,9 @@ iS   = elementIndex(gas,'S');
 % around H2O/C of 1:1.
 
 % Operation matrix
-H2OC = 1.5:-0.02:0;
+H2OC = 1.5:-0.005:0;
 n_h2o = size(H2OC,2);
-O2C=0.5:-0.02:0.1;
+O2C=0.5:-0.005:0.1;
 n_o2c = size(O2C,2);
 
 % Initialize Data Storage
@@ -57,6 +57,10 @@ xtest = zeros(16,1);
 
 % Now do the problem backwards.  
 % Make a loop to vary the oxygen-carbon ratio.
+
+water = Water;
+set(water, 'T', Tin, 'P', Pin);
+h_H2O_Tin = enthalpy_mole(water);
 
 for j = 1:n_h2o
     H2O_C = H2OC(j); % water to carbon ratio 
@@ -120,10 +124,10 @@ for i = 1:n_o2c
 
     % Use Cantera to find the enthalpies of the product gases for the
     % heating value problem.
-    set(gas,'T',25+273.15,'P',oneatm,'X','CO2:1');
-    hbar_CO2 = enthalpy_mole(gas);
     set(gas,'T',25+273.15,'P',oneatm,'X','H2O:1');
     hbar_H2O = enthalpy_mole(gas);
+    set(gas,'T',25+273.15,'P',oneatm,'X','CO2:1');
+    hbar_CO2 = enthalpy_mole(gas);
     set(gas,'T',25+273.15,'P',oneatm,'X','SO2:1');
     hbar_SO2 = enthalpy_mole(gas);
     
@@ -140,8 +144,8 @@ for i = 1:n_o2c
     h_mf_delta = Cp*(Tin-(25+273.1598));
       
     % Find specific enthalpies of air and water inputs
-    set(gas,'T',Tin,'P',oneatm,'X','H2O:1');
-    h_H2O_Tin = enthalpy_mole(gas);
+%     set(gas,'T',Tin,'P',oneatm,'X','H2O:1');
+%     h_H2O_Tin = enthalpy_mole(gas);
     set(gas,'T',Tin,'P',oneatm,'X','O2:1');
     h_O2_Tin = enthalpy_mole(gas);
     set(gas,'T',Tin,'P',oneatm,'X','N2:1');
@@ -157,7 +161,6 @@ for i = 1:n_o2c
     while (1)
         T_predicted_avg = (T_predicted_max + T_predicted_min)/2; % bisection search
 
-        %h_syngas = (mdot_maf/mdot_syngas)*(h_maf + (1+ash_maf)*h_mf_delta + Nin1_O2*h_O2_Tin/M_maf + Nin1_N2*h_N2_Tin/M_maf + (Nin1_H2O)*h_H2O_Tin/M_maf ); %%%%
         h_syngas = (mdot_maf/mdot_syngas) * (h_maf + (1+ash_maf)*h_mf_delta + O2_C*h_O2_Tin/M_maf + N2_C*h_N2_Tin/M_maf + (H2O_C)*h_H2O_Tin/M_maf); %%%%@@@@@@@@@@@@22
     
         if flag % pyrolysis condition
@@ -225,82 +228,120 @@ h_N2_Tin = enthalpy_mole(gas);
 %     end
 % end
 
-% PLOTTING CODE\
+% PLOTTING CODE
+
+
 figure(1)
 contour(O2C, H2OC, Temp_data', 600:100:2500,'ShowText','on', 'LineWidth',2)
+hold on
+contour(O2C, H2OC, Temp_data', [1270, 1270], 'k', 'ShowText','on', 'LineWidth',2)
+txt = '\rightarrow';
+text(0.4, 0.75, txt)
+hold off
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
 title("Temperature (C)")
-%improvePlot
+improvePlot
 
 figure(2)
 contour(O2C, H2OC, Species_data(:,:,iH2)','ShowText','on', 'LineWidth',2)
+hold on
+contour(O2C, H2OC, Temp_data', [1270, 1270], 'k', 'ShowText','on', 'LineWidth',2)
+txt = '\rightarrow';
+text(0.4, 0.75, txt)
+hold off
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
 title("H2 Mole Ratio")
-%improvePlot
+improvePlot
 
 figure(3)
-contour(O2C, H2OC, CGE(:,:)','ShowText','on', 'LineWidth',2)
+contour(O2C, H2OC, CGE(:,:)', 60:3:95, 'ShowText','on', 'LineWidth',2)
+hold on
+contour(O2C, H2OC, Temp_data', [1270, 1270], 'k', 'ShowText','on', 'LineWidth',2)
+txt = '\rightarrow';
+text(0.4, 0.75, txt)
+hold off
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
 title("Cold Gas Efficiency (%)")
-%improvePlot
+improvePlot
 
 figure(4)
 contour(O2C, H2OC, Syngas_yield(:,:)','ShowText','on', 'LineWidth',2)
+hold on
+contour(O2C, H2OC, Temp_data', [1270, 1270], 'k', 'ShowText','on', 'LineWidth',2)
+txt = '\rightarrow';
+text(0.4, 0.75, txt)
+hold off
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
 title("Syngas Molar Yield")
-%improvePlot
+improvePlot
 
-figure(5)
-contour(O2C, H2OC, Species_data(:,:,iCO)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("CO Mole Ratio")
+for k = 1:16
+    if sum(sum(Species_data(:,:,k))) > 0.01
+        figure(k+4)
+        contour(O2C, H2OC, Species_data(:,:,k)','ShowText','on', 'LineWidth',2)
+        hold on
+        contour(O2C, H2OC, Temp_data', [1270, 1270], 'k', 'ShowText','on', 'LineWidth',2)
+        txt = '\rightarrow';
+        text(0.4, 0.75, txt)
+        hold off
+        xlabel("Oxygen-Carbon Ratio")
+        ylabel("Water-Carbon Ratio")
+        title("Mole Ratio", speciesName(gas,k))
+        improvePlot
+    end
+end
 
-figure(6)
-contour(O2C, H2OC, Species_data(:,:,iCH4)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("CH_4 Mole Ratio")
-
-figure(7)
-contour(O2C, H2OC, Species_data(:,:,iH2O)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("H_2O Mole Ratio")
-
-figure(8)
-contour(O2C, H2OC, Species_data(:,:,iN2)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("N_2 Mole Ratio")
-
-figure(9)
-contour(O2C, H2OC, Species_data(:,:,iCO2)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("CO_2 Mole Ratio")
-
-figure(10)
-contour(O2C, H2OC, Species_data(:,:,iH2S)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("H_2S Mole Ratio")
-
-figure(11)
-contour(O2C, H2OC, Species_data(:,:,iCOS)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("COS Mole Ratio")
-
-figure(12)
-contour(O2C, H2OC, Species_data(:,:,iNH3)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("NH3 Mole Ratio")
+% figure(5)
+% contour(O2C, H2OC, Species_data(:,:,iCO)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("CO Mole Ratio")
+% 
+% figure(6)
+% contour(O2C, H2OC, Species_data(:,:,iCH4)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("CH_4 Mole Ratio")
+% 
+% figure(7)
+% contour(O2C, H2OC, Species_data(:,:,iH2O)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("H_2O Mole Ratio")
+% 
+% figure(8)
+% contour(O2C, H2OC, Species_data(:,:,iN2)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("N_2 Mole Ratio")
+% 
+% figure(9)
+% contour(O2C, H2OC, Species_data(:,:,iCO2)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("CO_2 Mole Ratio")
+% 
+% figure(10)
+% contour(O2C, H2OC, Species_data(:,:,iH2S)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("H_2S Mole Ratio")
+% 
+% figure(11)
+% contour(O2C, H2OC, Species_data(:,:,iCOS)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("COS Mole Ratio")
+% 
+% figure(12)
+% contour(O2C, H2OC, Species_data(:,:,iNH3)','ShowText','on', 'LineWidth',2)
+% xlabel("Oxygen-Carbon Ratio")
+% ylabel("Water-Carbon Ratio")
+% title("NH3 Mole Ratio")
 
 function LHV_mass=LHV_mass(x_gas)
     T=25+273.15; % [K]

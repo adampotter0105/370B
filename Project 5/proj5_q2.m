@@ -28,6 +28,9 @@ iH   = elementIndex(gas,'H');
 iO   = elementIndex(gas,'O');
 iN   = elementIndex(gas,'N');
 iS   = elementIndex(gas,'S');
+iCOS = speciesIndex(gas,'COS');
+iH2S = speciesIndex(gas,'H2S');
+iNH3 = speciesIndex(gas,'NH3');
 
 % Gasify methane using air.  Use molar ratios to specify the oxygen and water to be
 % used.  For complete combustion CH4 + 2O2 -> CO2 + 2H2O so we know that we
@@ -219,22 +222,26 @@ title("Temperature (C)")
 improvePlot
 
 figure(2)
-contour(O2C, H2OC, Species_data(:,:,iH2)','ShowText','on', 'LineWidth',2)
-xlabel("Oxygen-Carbon Ratio")
-ylabel("Water-Carbon Ratio")
-title("H2 Mole Ratio")
-improvePlot
-
-figure(3)
 contour(O2C, H2OC, CGE_data(:,:)','ShowText','on', 'LineWidth',2)
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
 title("Cold Gas Efficiency (%)")
 improvePlot
 
-figure(4)
+figure(3)
 contour(O2C, H2OC, Syngas_yield_data(:,:)','ShowText','on', 'LineWidth',2)
 xlabel("Oxygen-Carbon Ratio")
 ylabel("Water-Carbon Ratio")
 title("Syngas Molar Yield")
 improvePlot
+
+for k = 1:16
+    if sum(sum(Species_data(:,:,k))) > 0.01
+        figure(k+3)
+        contour(O2C, H2OC, Species_data(:,:,k)','ShowText','on', 'LineWidth',2)
+        xlabel("Oxygen-Carbon Ratio")
+        ylabel("Water-Carbon Ratio")
+        title("Mole Ratio", speciesName(gas,k))
+        improvePlot
+    end
+end
