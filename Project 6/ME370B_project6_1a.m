@@ -10,8 +10,8 @@
 % Provide access to support files via the Matlab path.
 addpath 'Fundamental_Relation_Files' 
 addpath 'Fundamental_Relation_Data'
-addpath 'Setup_Files' 
-addpath 'Property_Files' 
+addpath 'Setup_Files'
+addpath 'Property_Files'
 
 % Clean up and get ready to go.
 clear all
@@ -66,7 +66,7 @@ end
 figure(1)
 clf
 % Put the critical point and ends of the triple line on.
-semilogx(1/rcrit_i(ispecies),1/Pcrit_i(ispecies)/1e6,'kd')
+semilogx(1/rcrit_i(ispecies),Pcrit_i(ispecies)/1e6,'kd')
 hold on
 semilogx([1/rftrip_i(ispecies) 1/rgtrip_i(ispecies)],...
    [Ptrip_i(ispecies) Ptrip_i(ispecies)]/1e6,'ko-')
