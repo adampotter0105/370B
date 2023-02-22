@@ -40,8 +40,8 @@ r = [r1_guess; r2_guess]; % parameter vector
 f = @(P1, P2, mu1, mu2) (P1-P2)^2 + (mu1 - mu2)^2;
 
 % Tunable parameters (IF HAVING PROBLEMS INCREASE EPSILON, DECREASE ALPHA)
-epsilon = 100; % Maximum acceptable error (actually small compared to P, mu values)
-alpha = 0.5; % Scaler to make steps less agressive (slower)
+epsilon = 500; % Maximum acceptable error (actually small compared to P, mu values)
+alpha = 0.1; % Scaler to make steps less agressive (slower)
 drmax1 = (rmax_1 - rmin_1)*0.05;
 drmax2 = (rmax_2 - rmin_2)*0.05;
 
@@ -99,7 +99,7 @@ while f(P1, P2, mu1, mu2) > epsilon
         r(2) = rmin_2;
     end
     r
-    if it>1e4
+    if it>1e5
         fprintf("Saturation_it_NR failed to converge \n")
         break
     end
