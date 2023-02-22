@@ -40,13 +40,17 @@ r = [r1_guess; r2_guess]; % parameter vector
 f = @(P1, P2, mu1, mu2) (P1-P2)^2 + (mu1 - mu2)^2;
 
 % Tunable parameters (IF HAVING PROBLEMS INCREASE EPSILON, DECREASE ALPHA)
-epsilon = 50; % Maximum acceptable error (actually small compared to P, mu values)
-alpha = 0.1; % Scaler to make steps less agressive (slower)
+epsilon = 100; % Maximum acceptable error (actually small compared to P, mu values)
+alpha = 0.5; % Scaler to make steps less agressive (slower)
+drmax1 = (rmax_1 - rmin_1)*0.05;
+drmax2 = (rmax_2 - rmin_2)*0.05;
 
 % Derivative estimate of f wrt x
 dfdr = @(f, r) (f(1.001*r) - f(0.999*r))/(0.002*r); 
 
+it = 0;
 while f(P1, P2, mu1, mu2) > epsilon
+    it = it + 1;
     %Evaluate at guesses
     r1_guess = r(1);
     r2_guess = r(2);
@@ -69,7 +73,18 @@ while f(P1, P2, mu1, mu2) > epsilon
     % Jacobian and NR Step
     J = [2*dP*dP1dr1 + 2*dmu*dmu1dr1; ...
         -2*dP*dP2dr2 - 2*dmu*dmu2dr2];
-    r = r - alpha*f0*1./J;
+    %%
+    dr = alpha*f0*1./J;
+    if dr(1) > drmax1
+        dr(1) = drmax1;
+    end
+
+    if dr(2) > drmax2
+        dr(2) = drmax2;
+    end
+    %%
+
+    r = r - dr;
 
     % Clamp values arund max and min numbers
     if r(1) > rmax_1
@@ -84,6 +99,10 @@ while f(P1, P2, mu1, mu2) > epsilon
         r(2) = rmin_2;
     end
     r
+    if it>1e4
+        fprintf("Saturation_it_NR failed to converge \n")
+        break
+    end
 end
 
 
