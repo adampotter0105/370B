@@ -25,13 +25,12 @@ Setup_Props_i;
 % change this around to see what the plots look like for other species.
 ispecies = nH2;
 
-
 %% Project 6 - Problem 4
 
 % Pressure and enthalpy list for isobars
 Plist = [0.1 0.2 0.5 1 2 5 10 20 50 100 200 500]*101325;
 hlist = [0.35831 0.62672 0.89313 1.1605 1.428 1.6954 1.9628 2.2302 2.4976 2.765 3.0324 3.2998 3.5672 3.8346 4.1021 4.3695]*1e6;
-hlist = [1.1605 1.428 1.6954 1.9628 2.2302 2.4976 2.765 3.0324 3.2998 3.5672 3.8346 4.1021 4.3695]*1e6;
+%hlist = [1.1605 1.428 1.6954 1.9628 2.2302 2.4976 2.765 3.0324 3.2998 3.5672 3.8346 4.1021 4.3695]*1e6;
 
 % temperature list
 Tmin  = 13.96;
@@ -82,7 +81,7 @@ for j=1:1:length(Plist)
         s(i,j) = s_irT(ispecies, r, Tlist(i));
         if P < Pcrit_i(ispecies) %%%% To remove overlap the line under the dome
             if r > rv_list(j)
-                s(i,j) =inf;
+                s(i,j) =NaN;
             end
         end
     end
@@ -102,10 +101,12 @@ for j=1:1:length(Plist)
 end
 
 fprintf("Generating Isenthalps \n")
-% isenthalps
+% Isenthalps
 Pmax = 500*101325;
 Pmin = 0.1*101325;
 Plist2 = linspace(Pmin, Pmax, 50);
+T_for_hlines = NaN(length(Plist2),length(hlist));
+s_for_hlines = NaN(length(Plist2),length(hlist));
 
 for j=1:1:length(hlist)
     h=hlist(j)
