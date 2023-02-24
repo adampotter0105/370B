@@ -36,7 +36,7 @@ hlist = [1.1605 1.428 1.6954 1.9628 2.2302 2.4976 2.765 3.0324 3.2998 3.5672 3.8
 % temperature list
 Tmin  = 13.96;
 Tmax  = 310;
-Tlist = linspace(Tmin,Tmax,1000);
+Tlist = linspace(Tmin,Tmax,100);
 
 % triple line
 num_Ttri  = 13.95;
@@ -47,27 +47,24 @@ svtri     = s_irT(ispecies, num_rvtri, num_Ttri);
 T_tri     = num_Ttri*ones(100);
 s_tri     = linspace(sltri,svtri,100);
 
+fprintf("Generating Vapor Dome \n")
 % vapor dome 
-num_Pcri = 1.2838*1e6;
-num_Ptri = 0.0081*1e6;
-P_list_dome_1 = linspace(num_Ptri, num_Ptri+(num_Pcri-num_Ptri)*4/5, 15);
-P_list_dome_2 = linspace(num_Ptri+(num_Pcri-num_Ptri)*4/5, num_Pcri, 15);
-P_list_dome   = [P_list_dome_1 P_list_dome_2];     
-for j=1:1:length(P_list_dome)
-    P=P_list_dome(j);
-    [T(j), rl(j), rv(j)] = Saturation_iP(ispecies, P);
-    s_dome_liq(j) = s_irT(ispecies, rl(j), T(j));
-    s_dome_vap(j) = s_irT(ispecies, rv(j), T(j));
-    s_dome_x(:,j) = linspace(s_dome_liq(j), s_dome_vap(j), 100);
-    T_dome_x(j)   = T(j);
-
+T_dome_x = linspace(1.05*Ttrip_i(ispecies), 0.99*Tcrit_i(ispecies), 15);    
+s_dome_liq = NaN(1,length(T_dome_x));
+s_dome_vap = NaN(1,length(T_dome_x));
+for i = 1:length(T_dome_x)
+    T = T_dome_x(i);
+    [~, rl, rv] = Saturation_iT_lookup(T);
+    s_dome_liq(i) = s_irT(ispecies, rl, T);
+    s_dome_vap(i) = s_irT(ispecies, rv, T);
 end
 
+fprintf("Generating Isobars Under Dome \n")
 % isobars under the dome (horizontal lines)
 for j=1:1:length(Plist)
     P=Plist(j);
     if P < Pcrit_i(ispecies)
-        [T, rl, rv] = Saturation_iP(ispecies, P);
+        [T, rl, rv] = Saturation_iP_lookup(P);
         T_dome(j)  = T;
         rv_list(j) = rv;
         s_dome_max = s_irT(ispecies, rl, T);
@@ -76,6 +73,7 @@ for j=1:1:length(Plist)
     end
 end
 
+fprintf("Generating Isobars in Vapor Phase \n")
 % isobars vapor
 for j=1:1:length(Plist)
     P=Plist(j)
@@ -91,6 +89,7 @@ for j=1:1:length(Plist)
 end
 
 % isobars liquid (left part)
+fprintf("Generating Isobars in Liquid Phase \n")
 for j=1:1:length(Plist)
     P=Plist(j)
     for i=1:1:length(Tlist)
@@ -102,10 +101,11 @@ for j=1:1:length(Plist)
     end
 end
 
-% isentalps
+fprintf("Generating Isenthalps \n")
+% isenthalps
 Pmax = 500*101325;
 Pmin = 0.1*101325;
-Plist2 = linspace(Pmin, Pmax, 100);
+Plist2 = linspace(Pmin, Pmax, 50);
 
 for j=1:1:length(hlist)
     h=hlist(j)
@@ -118,20 +118,18 @@ for j=1:1:length(hlist)
     end
 end
 
-%% plotting
-
+fprintf("Starting Plotting \n")
+%% Plotting
 figure()
-
+hold on
 % plot for isobars (vapor)
 for j=1:length(Plist)
     plot(s(:,j)/1e3,Tlist,'r')
-    hold on
 end
 
 % plot for isobars (liquid)
 for j=1:length(Plist)
     plot(s_left(:,j)/1e3, T_left,'r')
-    hold on
 end
 
 % plot for isobar under the dome
@@ -139,19 +137,16 @@ for j=1:1:length(Plist)
     P=Plist(j);
     if P < Pcrit_i
         plot(s_dome(:,j)/1e3,T_dome(j)*ones(100), 'r')
-        hold on
     end
 end
 
 % plot for isenthalps w/o three low ethalpy
 for j=1:length(hlist)
     plot(s_for_hlines(:,j)/1e3,T_for_hlines(:,j),'b')
-    hold on
 end
 
 % plot for triple line
 plot(s_tri/1e3,T_tri,'k--','LineWidth',3)
-hold on
 
 %plot for vapor dome
 plot(s_dome_liq/1e3, T_dome_x,'k-','LineWidth',3)

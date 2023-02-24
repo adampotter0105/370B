@@ -18,14 +18,14 @@ ispecies = nH2;
 
 Tmax = 21; % approximate max in range of T to evaluate
 Tmin = 17; % approximate min in range of T to evaluate
-N = 20; % number of data points between Tmax and Tmin
+N = 8; % number of data points between Tmax and Tmin
 
 % Iterate a bunch of temperatures to get saturated liquid densities
 % (kg/m^3) using saturation function from Part 2b.
 i = 1;
 for T1 = linspace(Tmin,Tmax,N)
     T(i) = T1;
-    [P_sat1(i),r_liq1(i),r_vap1(i)] = Saturation_iT_NR(T1);
+    [P_sat1(i),r_liq1(i),r_vap1(i)] = Saturation_iT_lookup(T1);
     i = i+1;
 end
 

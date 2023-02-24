@@ -1,4 +1,4 @@
-function [sat_pres, r_sat_liq, r_sat_vap] = Saturation_iT_NR(T)
+function [sat_pres, r_sat_liq, r_sat_vap, failed] = Saturation_iT_NR(T)
 %Liquid_Spinodal_iT returns the location/density (kg/m^3) of the liquid
 %numerical spinodals (outermost locations at which dP/dr goes to zero) for
 %any given temperature (K).
@@ -22,6 +22,8 @@ ispecies = nH2;
 rmax_1 = rupper_i(ispecies);
 rmin_1 = Liquid_Spinodal_iT(T);
 
+failed = 0;
+
 % chemical potential vapor_spinodal point to max_spec_vol
 rmax_2   = Vapor_Spinodal_iT(T);
 rmin_2   = rgtrip_i(ispecies);
@@ -41,7 +43,7 @@ f = @(P1, P2, mu1, mu2) (P1-P2)^2 + (mu1 - mu2)^2;
 
 % Tunable parameters (IF HAVING PROBLEMS INCREASE EPSILON, DECREASE ALPHA)
 epsilon = 1500; % Maximum acceptable error (actually small compared to P, mu values)
-alpha = 0.1; % Scaler to make steps less agressive (slower)
+alpha = 0.05; % Scaler to make steps less agressive (slower)
 drmax1 = (rmax_1 - rmin_1)*0.05;
 drmax2 = (rmax_2 - rmin_2)*0.05;
 
@@ -98,9 +100,10 @@ while f(P1, P2, mu1, mu2) > epsilon
     elseif r(2) < rmin_2
         r(2) = rmin_2;
     end
-    r
-    if it>1e5
+    %r
+    if it>1e4
         fprintf("Saturation_it_NR failed to converge \n")
+        failed = 1;
         break
     end
 end
