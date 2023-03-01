@@ -56,22 +56,6 @@ if(N == 2)
     c(N2) = 1 - c(O2);
 end
 
-% R = R_c(c);
-% Tgiven = 100;
-
-% % Set an arbitrary mixture (or comment out).
-% if(N == 3)
-%     % Use a ternary mixture.
-%     c(O2) = 0.25;
-%     c(Ar) = 0.25;
-%     c(N2) = 1 - c(O2) - c(Ar);
-% end
-% if(N == 2)
-%     % Use a binary mixture.
-%     c(O2) = 0.25;
-%     c(N2) = 1 - c(O2);
-% end
-
 % % Get the inflection point for this composition.
 [Tinfl, rinfl] = Pr_Inflection_c(c);
 Pinfl = P_crT(c,rinfl,Tinfl); 
@@ -86,7 +70,6 @@ for j = 1:length(Tgiven)
 
     P0 = Psolidair;
     while true
-
         rv = rv_cTP(c,Tgiven(j),P0);
         mu_mix_O2 = mui_icrT(O2,c,rv,Tgiven(j));
         mu_mix_Ar = mui_icrT(Ar,c,rv,Tgiven(j));
@@ -104,7 +87,7 @@ for j = 1:length(Tgiven)
         x_N2 = exp((mu_mix_N2-mu_pure_N2)/Ru/Tgiven(j));
         
         x_sum = x_O2+x_Ar+x_N2
-        error = 1-x_sum;
+        error = abs(1-x_sum);
         if error < 0.001
             break
         end
