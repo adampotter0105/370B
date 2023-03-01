@@ -71,14 +71,15 @@ end
 Pinfl = P_crT(c,rinfl,Tinfl)
 
 % Set boundaries for plot.
-Tmax = Tinfl;
+Tmax = 120;
 Tmin = Tlower;
-steps = 10;
+steps = 20;
 dT = (Tmax - Tmin)/steps;
 i = 1;
 % Initialize some variables to store data.
 Tplot   = zeros(steps+1,1); % (K)
-Pplot   = zeros(steps+1,1); % (Pa)
+P_dew   = zeros(steps+1,1); % (Pa)
+P_bubble   = zeros(steps+1,1); % (Pa)
 rfiplot = zeros(steps+1,1); % ideal solution bubble point (kg/m^3)
 rgiplot = zeros(steps+1,1); % ideal solution dew point (kg/m^3)
 rfcplot = zeros(steps+1,1); % complement solution bubble point (kg/m^3)
@@ -86,15 +87,23 @@ rgcplot = zeros(steps+1,1); % complement solution dew point (kg/m^3)
 XN2plot = zeros(steps+1,1); % mole fraction N2
 XO2plot = zeros(steps+1,1); % mole fraction O2
 XArplot = zeros(steps+1,1); % mole fraction Ar
+search_fail_dew = zeros(steps+1,1); % 1 if the loop failed to faind a solution
+search_fail_bubble = zeros(steps+1,1); % 1 if the loop failed to faind a solution
+
+%% Dew Point
 
 for T=Tmin:dT:Tmax
     T
-    P = Psolidair;
+    Pmax = Pcritair;
+    Pmin = Psolidair;
     x = zeros(N,1);
-    while abs(sum(x)-1) > 0.001
-        % Update P for next iteration
-        P = P + (Pcritair - Psolidair)/10000;
-        % Get rv & rl of mixture
+    it = 0;
+    failed = 0;
+    while abs(sum(x)-1) > 0.001 || isnan(sum(x))
+        it = it + 1;
+        % Set Pressure
+        P = (Pmax-Pmin)/2 + Pmin;
+        % Get rv of mixture
         rv = rv_cTP(c,T,P);
         % Get the chemical potentials of each species in mixture c at rv,T
         mu_mix_N2 = mui_icrT(N2,c,rv,T); % (J/kmol-species-i)
@@ -112,21 +121,109 @@ for T=Tmin:dT:Tmax
         x(O2) = exp((mu_mix_O2 - mu_pure_O2)/(Ru*T));
         x(N2) = exp((mu_mix_N2 - mu_pure_N2)/(Ru*T));
         x(Ar) = exp((mu_mix_Ar - mu_pure_Ar)/(Ru*T));
+        rho = [rl_N2, rl_O2, rl_Ar];
         % Get the complement
         MW_air = x(O2)*MW_O2+x(N2)*MW_N2+x(Ar)*MW_Ar; % (g/mol)
         mass(O2) = x(O2)*MW_air/1000; % (kg)
         mass(N2) = x(N2)*MW_air/1000; % (kg)
         mass(Ar) = x(Ar)*MW_air/1000; % (kg)
-        V(O2) = mass(O2)/rl_O2; % (m^3)
-        V(N2) = mass(N2)/rl_N2; % (m^3)
-        V(Ar) = mass(Ar)/rl_Ar; % (m^3)
+        V(O2) = mass(O2)/rho(2); % (m^3)
+        V(N2) = mass(N2)/rho(1); % (m^3)
+        V(Ar) = mass(Ar)/rho(3); % (m^3)
         rlc = sum(mass)/sum(V); % (kg/m^3)
+        
+        if isnan(sum(x))
+            Pmax = 0.9*(Pmax-Pmin) + Pmin; % Reduce Pmax to find area without NaNs
+        elseif sum(x) > 1
+            Pmax = P; % Make new P lower
+        else
+            Pmin = P; % Make new P higher
+        end
+
+        
+        if it>100
+            fprintf("Failed to Find Solution \n")
+            failed = 1;
+            break
+        end
     end
     % Storage for plotting
+    search_fail_dew(i) = failed;
     Tplot(i)    = T;
-    Pplot(i)    = P;
+    P_dew(i)    = P;
     rgiplot(i)  = rv;
-    rlcplot(i)  = rlc;
+    rfcplot(i)  = rlc;
+    XN2plot(i)  = x(N2);
+    XO2plot(i)  = x(O2);
+    XArplot(i)  = x(Ar);
+    i = i+1;
+end
+
+%% Bubble Point
+fprintf("Starting Bubble Point \n")
+i = 1;
+for T=Tmin:dT:Tmax
+    T
+    Pmax = Pcritair;
+    Pmin = Psolidair;
+    x = zeros(N,1);
+    it = 0;
+    failed = 0;
+    while abs(sum(x)-1) > 0.001 || isinf(sum(x)) || isnan(sum(x))
+        it = it + 1;
+        % Set Pressure
+        P = (Pmax-Pmin)/2 + Pmin;
+        % Get rv of mixture
+        rl = rl_cTP(c,T,P);
+        % Get the chemical potentials of each species in mixture c at rv,T
+        mu_mix_N2 = mui_icrT(N2,c,rl,T); % (J/kmol-species-i)
+        mu_mix_O2 = mui_icrT(O2,c,rl,T);
+        mu_mix_Ar = mui_icrT(Ar,c,rl,T);
+        % Get the bubble point of each species
+        rv_O2 = rv_iTP(O2,T,P);
+        rv_N2 = rv_iTP(N2,T,P);
+        rv_Ar = rv_iTP(Ar,T,P);
+        % Get the chemical potential of each species as pure fluid
+        mu_pure_O2 = mu_irT(O2,rv_O2,T); % (J/kmol)
+        mu_pure_N2 = mu_irT(N2,rv_N2,T);
+        mu_pure_Ar = mu_irT(Ar,rv_Ar,T);
+        % Get the mole fractions
+        x(O2) = exp((mu_mix_O2 - mu_pure_O2)/(Ru*T));
+        x(N2) = exp((mu_mix_N2 - mu_pure_N2)/(Ru*T));
+        x(Ar) = exp((mu_mix_Ar - mu_pure_Ar)/(Ru*T));
+        rho = [rv_N2, rv_O2, rv_Ar];
+        % Get the complement
+        MW_air = x(O2)*MW_O2+x(N2)*MW_N2+x(Ar)*MW_Ar; % (g/mol)
+        mass(O2) = x(O2)*MW_air/1000; % (kg)
+        mass(N2) = x(N2)*MW_air/1000; % (kg)
+        mass(Ar) = x(Ar)*MW_air/1000; % (kg)
+        V(O2) = mass(O2)/rho(2); % (m^3)
+        V(N2) = mass(N2)/rho(1); % (m^3)
+        V(Ar) = mass(Ar)/rho(3); % (m^3)
+        rvc = sum(mass)/sum(V); % (kg/m^3)
+        
+        if isinf(sum(x))
+            Pmax = 0.9*(Pmax-Pmin) + Pmin;
+            %Pmin = 0.1*(Pmax-Pmin) + Pmin; % Reduce Pmax to find area without NaNs
+        elseif sum(x) < 1
+            Pmax = P; % Make new P lower
+        else
+            Pmin = P; % Make new P higher
+        end
+
+        
+        if it>100
+            fprintf("Failed to Find Solution \n")
+            failed = 1;
+            break
+        end
+    end
+    % Storage for plotting
+    search_fail_bubble(i) = failed;
+    Tplot(i)    = T;
+    P_bubble(i)    = P;
+    rfiplot(i)  = rl;
+    rgcplot(i)  = rvc;
     XN2plot(i)  = x(N2);
     XO2plot(i)  = x(O2);
     XArplot(i)  = x(Ar);
@@ -134,25 +231,13 @@ for T=Tmin:dT:Tmax
 end
 
 
-
-
-% figure(1)
-% clf
-% hold on
-% plot(rinfl,Pinfl/1e6,'kd')
-% plot([0 rupper],[Psolidair Psolidair]/1e6,'k--')
-% plot(rgsplot,Pgsplot/1e6,'k.',rfsplot,Pfsplot/1e6,'k.')
-% plot(rinfl,Pinfl/1e6,'ko')
-% %plot([rupper rupper],[-30 110],'r--')
-% %plot([0 1000],[100 100],'r--')
-% legend('P-\rho Inflection','Solid Air','Location','SouthWest')
-% hold off
-% xlabel('Density (kg/m^3)')
-% ylabel('Pressure (MPa)')
-% axis([0 rupper -0.5*Pinfl/1e6 2*Pinfl/1e6])
-% if(N == 3)
-%     title(sprintf('%.3f N2, %.3f O2, %.3f Ar',c(N2),c(O2),c(Ar)))
-% end
-% if(N == 2)
-%     title(sprintf('%.3f N2, %.3f O2',c(N2),c(O2)))
-% end
+scatter(rfiplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble))
+hold on
+scatter(rgcplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble))
+scatter(rgiplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew))
+scatter(rfcplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew))
+legend(["Bubble", "Bubble Complement" ,"Dew", "Dew Complement"])
+hold off
+xlabel("Density (kg/m^3)")
+ylabel("Temperature (K)")
+improvePlot
