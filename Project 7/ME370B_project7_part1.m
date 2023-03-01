@@ -67,8 +67,8 @@ if(N == 2)
 end
 
 % Get the inflection point for this composition.
-[Tinfl rinfl] = Pr_Inflection_c(c)
-Pinfl = P_crT(c,rinfl,Tinfl)
+[Tinfl, rinfl] = Pr_Inflection_c(c);
+Pinfl = P_crT(c,rinfl,Tinfl);
 
 % Set boundaries for plot.
 Tmax = 120;
@@ -84,9 +84,12 @@ rfiplot = zeros(steps+1,1); % ideal solution bubble point (kg/m^3)
 rgiplot = zeros(steps+1,1); % ideal solution dew point (kg/m^3)
 rfcplot = zeros(steps+1,1); % complement solution bubble point (kg/m^3)
 rgcplot = zeros(steps+1,1); % complement solution dew point (kg/m^3)
-XN2plot = zeros(steps+1,1); % mole fraction N2
-XO2plot = zeros(steps+1,1); % mole fraction O2
-XArplot = zeros(steps+1,1); % mole fraction Ar
+XN2_dew = zeros(steps+1,1); % mole fraction N2
+XO2_dew = zeros(steps+1,1); % mole fraction O2
+XAr_dew = zeros(steps+1,1); % mole fraction Ar
+XN2_bubble = zeros(steps+1,1); % mole fraction N2
+XO2_bubble = zeros(steps+1,1); % mole fraction O2
+XAr_bubble = zeros(steps+1,1); % mole fraction Ar
 search_fail_dew = zeros(steps+1,1); % 1 if the loop failed to faind a solution
 search_fail_bubble = zeros(steps+1,1); % 1 if the loop failed to faind a solution
 
@@ -153,9 +156,9 @@ for T=Tmin:dT:Tmax
     P_dew(i)    = P;
     rgiplot(i)  = rv;
     rfcplot(i)  = rlc;
-    XN2plot(i)  = x(N2);
-    XO2plot(i)  = x(O2);
-    XArplot(i)  = x(Ar);
+    XN2_dew(i)  = x(N2);
+    XO2_dew(i)  = x(O2);
+    XAr_dew(i)  = x(Ar);
     i = i+1;
 end
 
@@ -224,20 +227,61 @@ for T=Tmin:dT:Tmax
     P_bubble(i)    = P;
     rfiplot(i)  = rl;
     rgcplot(i)  = rvc;
-    XN2plot(i)  = x(N2);
-    XO2plot(i)  = x(O2);
-    XArplot(i)  = x(Ar);
+    XN2_bubble(i)  = x(N2);
+    XO2_bubble(i)  = x(O2);
+    XAr_bubble(i)  = x(Ar);
     i = i+1;
 end
 
-
+% Graph 1
+figure(1)
 scatter(rfiplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble))
 hold on
 scatter(rgcplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble))
 scatter(rgiplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew))
 scatter(rfcplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew))
-legend(["Bubble", "Bubble Complement" ,"Dew", "Dew Complement"])
+scatter(rcritair, Tcritair, "k*")
+scatter(rinfl, Tinfl, "*r")
+scatter(rmaxcondenbar, Tmaxcondenbar, "*b")
+scatter(rmaxcondentherm, Tmaxcondentherm, "*g")
+legend(["Bubble", "Bubble Complement" ,"Dew", "Dew Complement", "Crit Point", "Inflection Pnt", "Max Condenbar", "Max Condentherm"])
 hold off
 xlabel("Density (kg/m^3)")
 ylabel("Temperature (K)")
+ylim([55 140])
 improvePlot
+
+
+% Graph 2
+figure(2)
+scatter(rfiplot.*(1-search_fail_bubble), P_bubble.*(1-search_fail_bubble)/1e6)
+hold on
+scatter(rgcplot.*(1-search_fail_bubble), P_bubble.*(1-search_fail_bubble)/1e6)
+scatter(rgiplot.*(1-search_fail_dew), P_dew.*(1-search_fail_dew)/1e6)
+scatter(rfcplot.*(1-search_fail_dew), P_dew.*(1-search_fail_dew)/1e6)
+scatter(rcritair, Pcritair/1e6, "k*")
+scatter(rinfl, Pinfl/1e6, "*r")
+scatter(rmaxcondenbar, Pmaxcondenbar/1e6, "*b")
+scatter(rmaxcondentherm, Pmaxcondentherm/1e6, "*g")
+legend(["Bubble", "Bubble Complement" ,"Dew", "Dew Complement", "Crit Point", "Inflection Pnt", "Max Condenbar", "Max Condentherm"])
+hold off
+xlabel("Density (kg/m^3)")
+ylabel("Pressure (MPa)")
+improvePlot
+
+% Graph 3
+figure(3)
+scatter(rgcplot.*(1-search_fail_bubble), XN2_bubble.*(1-search_fail_bubble), "r")
+hold on
+scatter(rgcplot.*(1-search_fail_bubble), XO2_bubble.*(1-search_fail_bubble), "g")
+scatter(rgcplot.*(1-search_fail_bubble), XAr_bubble.*(1-search_fail_bubble), "b")
+scatter(rfcplot.*(1-search_fail_dew), XN2_dew.*(1-search_fail_dew), "r")
+scatter(rfcplot.*(1-search_fail_dew), XO2_dew.*(1-search_fail_dew), "g")
+scatter(rfcplot.*(1-search_fail_dew), 10*XAr_dew.*(1-search_fail_dew), "b")
+legend("Nitrogen", "Oxygen", "10*Argon")
+hold off
+xlabel("Complimentary Phase Density (kg/m^3)")
+ylabel("Complimentary Phase Mole Fraction")
+improvePlot
+
+
