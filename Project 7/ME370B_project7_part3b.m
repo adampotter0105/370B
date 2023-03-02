@@ -138,9 +138,67 @@ x_liq2 = [x5(N1), x6_l(N2)];
 s_liq2 = [s5, s6_l];
 T_liq2 = [T5, T6];
 
-plot3(s_vap, x_vap, T_vap, "b--")
-plot3(s_liq1, x_liq1, T_liq1, "b--")
-plot3(s_liq2, x_liq2, T_liq2, "b--")
+%% Start Plotting, include vapor dome data
+% Load a file to save recalculating things up to here.
+load Tsx_Data
 
+% We will build the surface as we go.  Start a figure and put it on hold.
+figure(1)
+clf
+hold on
+ylabel('Nitrogen Mole Fraction','rotation',0)
+xlabel('Specific Entropy (kJ/kg-K)','rotation',0)
+zlabel('Temperature (K)')
+view([-10 40])
+axis([2 7 0 1 60 300])
+grid on
+drawnow
+
+% Plot Cycle
+plot3(s_vap, x_vap, T_vap, "r--")
+plot3(s_liq1, x_liq1, T_liq1, "r--")
+plot3(s_liq2, x_liq2, T_liq2, "r--")
+
+% Tell the user the composition planes to be shown.
+xN2_planes = clist;
+
+% Show the P-rho critical locus on the plot.
+plot3(sc/1e3,xN2,Tc,'kx','LineWidth',2)
+
+% Add domes at each plane.
+for i=1:1:NCS
+    plot3(sdome(i,:)/1e3,xN2(i)*ones(1,length(sdome)),Tdome(i,:),'k-','LineWidth',2)
+    drawnow
+end
+
+% Add dew and bubble points.
+for i=1:1:NCS
+    plot3(sdew(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tdew(i,:),'b.','LineWidth',2)
+    plot3(sbub(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tbub(i,:),'b.','LineWidth',2)
+    drawnow
+end
+
+% Put splines through the bubble and dew data in the composition direction.
+[row col] = size(Tdew);
+for j=2:3
+    plot3(sdewSpline(j,:)/1e3,xN2Spline,TdewSpline(j,:),'b-','LineWidth',2)
+    plot3(sbubSpline(j,:)/1e3,xN2Spline,TbubSpline(j,:),'b-','LineWidth',2)
+    drawnow
+end
+
+% Tell the user the pressure surfaces to be shown.
+P_surfaces = Plist
+
+% Add isobars.
+for i=1:1:NCS
+    % Do the points below the dome.
+    for j=2:3
+        plot3(sisoPlow(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,j,i),'b-','LineWidth',2)
+        plot3(sisoPhigh(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,j,i),'b-','LineWidth',2)
+        drawnow
+    end
+end
+
+% Finished with the dynamic plot.  Close it out.
 hold off
 improvePlot
