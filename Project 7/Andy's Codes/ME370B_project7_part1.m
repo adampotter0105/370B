@@ -140,7 +140,7 @@ for T=Tmin:dT:Tmax1
     avg         = mean(elites);         % calculates new mean of elite samples
     covar       = cov(elites);          % calculates new covariance matrix of elite samples
     
-    fprintf('\nWe are making progress!\n')
+    fprintf('\nWe''re making progress!\n')
     sumx_best = 0;
     sumx = [];
     while abs(sumx_best-1) > 0.001 % set tolerance
@@ -204,7 +204,7 @@ for T=Tmin:dT:Tmax1
     i = i+1;
 end
 
-fprintf('\nMoving onto the bubble problem.\n')
+fprintf('\nMoving onto the bubble problem...\n')
 
 % The bubble problem.
 i = 1;
@@ -246,7 +246,7 @@ for T=Tmin:dT:Tmax2
     avg         = mean(elites);         % calculates new mean of elite samples
     covar       = cov(elites);          % calculates new covariance matrix of elite samples
     
-    fprintf('\nWe are almost there!\n')
+    fprintf('\nWe''re almost there!\n')
     sumx_best = 0;
     sumx = [];
     while abs(sumx_best-1) > 0.001 % set tolerance
@@ -313,7 +313,7 @@ for T=Tmin:dT:Tmax2
     i = i+1;
 end
 
-fprintf('\nLet''s eff''ing go! Congratulations!\n')
+fprintf('\nLet''s effing go! Congratulations!\n')
 
 % Plot them figures!
 figure(1)
@@ -345,7 +345,6 @@ xlabel('Density (kg/m^3)')
 ylabel('Pressure (MPa)')
 
 figure(3)
-clf
 hold on
 plot(rfcplot,XfN2plot,'o')
 plot(rfcplot,XfO2plot,'o')
