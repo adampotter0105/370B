@@ -1,4 +1,4 @@
-% Project 7 Part 2a
+g% Project 7 Part 2a
 
 addpath 'Fundamental Relation Files'
 addpath 'Fundamental Relation Data'
@@ -94,7 +94,19 @@ rho_comp_spl = linspace(rho_bub_comp(1),rho_dew_comp(1),50);
 %rho_com_spl = [rho_bub_comp(1) rcritair rho_dew_comp(1)];
 Temps_vap_dome = [Temps Tcritair flip(Temps)];
 %Temps_vap_spl = [Temps(1) Tcritair Temps(length(Temps))];
+P_vap_dome_comp = [P_bub Pcritair flip(P_dew)];
+P_vap_dome = flip(P_vap_dome_comp);
+Pspline = interp1(rho_vap_dome,P_vap_dome,rho_vap_dome_spl,'spline');
+Pspline_comp = interp1(rho_comp,P_vap_dome_comp,rho_comp_spl,'spline');
+Tspline = interp1(rho_vap_dome,Temps_vap_dome,rho_vap_dome_spl,'spline');
+Tspline_comp = interp1(rho_comp,Temps_vap_dome,rho_comp_spl,'spline');
 
+XN2 = [XN2_bub c(N2) flip(XN2_dew)];
+XO2 = [XO2_bub c(O2) flip(XO2_dew)];
+XAr = [XAr_bub c(Ar) flip(XAr_dew)];
+XN2_spl = interp1(rho_comp,XN2,rho_comp_spl,'spline');
+XO2_spl = interp1(rho_comp,XO2,rho_comp_spl,'spline');
+XAr_spl = interp1(rho_comp,XAr,rho_comp_spl,'spline');
 figure(1)
 
 plot(rcritair,Tcritair,'rd');
@@ -102,9 +114,7 @@ hold on;
 plot(rmaxcondentherm,Tmaxcondentherm,'kd')
 plot(rmaxcondenbar,Tmaxcondenbar,'ksquare')
 plot(rinfl,Tinfl,'ro')
-Tspline = interp1(rho_vap_dome,Temps_vap_dome,rho_vap_dome_spl,'spline');
 plot(rho_vap_dome_spl,Tspline,'k');
-Tspline_comp = interp1(rho_comp,Temps_vap_dome,rho_comp_spl,'spline');
 plot(rho_comp_spl,Tspline_comp,'b');
 plot(rho_dew,Temps,'ko');
 plot(rho_dew_comp,Temps,'bo');
@@ -115,3 +125,38 @@ xlabel('Density (kg/m^3)');
 ylabel('Temperature (K)');
 title('Ternary Air');
 legend('Critical Point','MaxCondentherm','MaxCondenbar','Inflection Point','Vapor Dome','Complement');
+
+
+figure(2)
+
+plot(rcritair,Pcritair/1e6,'rd');
+hold on;
+plot(rmaxcondentherm,Pmaxcondentherm/1e6,'kd')
+plot(rmaxcondenbar,Pmaxcondenbar/1e6,'ksquare')
+plot(rinfl,Pinfl/1e6,'ro')
+plot(rho_vap_dome_spl,Pspline/1e6,'k');
+plot(rho_comp_spl,Pspline_comp/1e6,'b');
+plot(rho_dew,P_dew/1e6,'ko');
+plot(rho_dew_comp,P_dew/1e6,'bo');
+plot(rho_bub,P_bub/1e6,'ko');
+plot(rho_bub_comp,P_bub/1e6,'bo');
+hold off;
+xlabel('Density (kg/m^3)');
+ylabel('Pressure (MPa)');
+title('Ternary Air');
+legend('Critical Point','MaxCondentherm','MaxCondenbar','Inflection Point','Vapor Dome','Complement');
+
+figure(3)
+
+plot(rho_comp_spl,XN2_spl,'r');
+hold on;
+plot(rho_comp_spl,XO2_spl,'g');
+plot(rho_comp_spl,10*XAr_spl,'b');
+scatter(rho_comp, XN2, 'r')
+scatter(rho_comp, XO2, 'g')
+scatter(rho_comp, 10*XAr, 'b')
+hold off;
+xlabel('Complimentary Phase Density (kg/m^3)');
+ylabel('Complimentary Phase Mole Fraction');
+title('Ternary Air');
+legend(["Nitrogen", "Oxygen", "10*Argon"]);
