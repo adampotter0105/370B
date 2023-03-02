@@ -81,6 +81,10 @@ end
 
 x = [rgi; rfi];
 y = [Ti; Ti];
+if N == 3
+    x = [x; rcritair];
+    y = [y; Tcritair];
+end
 X = linspace(max(rgi),min(rfi),10000);
 Y = spline(x,y,X);
 [T_locus idx_max] = max(Y);
