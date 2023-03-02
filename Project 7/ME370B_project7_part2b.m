@@ -2,17 +2,6 @@
 %Create the following graphs: T-s, T-h, P-h, h-s spline fits
 % Include condentherm condenbar, inflection point, and critical point
 
-addpath 'Fundamental Relation Files'
-addpath 'Fundamental Relation Data'
-addpath 'Mixture Models'
-addpath 'Setup Files'
-addpath 'Property Files'
-addpath 'Procedure Files'
-
-clear all
-format compact
-fprintf('\n************************************************************\n')
-
 % Set up the basic storage and load the FR files and mixture model.
 % Set the number of components in mixture (N = 2 for binary, N = 3 for ternary).
 N = 3;
@@ -65,56 +54,29 @@ end
 [Tinfl, rinfl] = Pr_Inflection_c(c);
 Pinfl = P_crT(c,rinfl,Tinfl);
 
-Tmax = 120;
-Tmin = Tlower;
-T_steps = 20;
-Tlist = linspace(Tmin, Tmax, T_steps);
-
-% Creeate and save data
-% P_dew = NaN(1,T_steps);
-% P_bub = NaN(1,T_steps);
-% rv_dew = NaN(1,T_steps);
-% rl_dew = NaN(1,T_steps);
-% rl_bub = NaN(1,T_steps);
-% rv_bub = NaN(1,T_steps);
-% X_dew = NaN(N,T_steps);
-% X_bub = NaN(N,T_steps);
-% 
-% for i = 1:T_steps
-%     T = Tlist(i)
-%     [P_dew(i), rv_dew(i), rl_dew(i), X_dew(:,i)] = Ideal_Dew_cT(c,T);
-%     [P_bub(i), rl_bub(i), rv_bub(i), X_bub(:,i)] = Ideal_Bubble_cT(c,T);
-% end
-% 
-% save 'dew_bubble_data.mat' P_bub P_dew rv_dew rv_bub rl_bub rl_dew X_dew X_bub
-load 'dew_bubble_data.mat'
+T_steps = length(Tspline);
 
 % Generate Secondary Properties (h, s)
-h_dew = zeros(1,length(Tlist));
-h_bub = zeros(1,length(Tlist));
-s_dew = zeros(1,length(Tlist));
-s_bub = zeros(1,length(Tlist));
+h_dome = zeros(1,length(Tspline));
+s_dome = zeros(1,length(Tspline));
 for i = 1:T_steps
-    T = Tlist(i)
-    h_dew(i) = h_crT(c, rv_dew(i), T);
-    s_dew(i) = s_crT(c, rv_dew(i), T);
-    h_bub(i) = h_crT(c, rl_bub(i), T);
-    s_bub(i) = s_crT(c, rl_bub(i), T);
+    T = Tspline(i)
+    h_dome(i) = h_crT(c, rho_vap_dome_spl(i), T);
+    s_dome(i) = s_crT(c, rho_vap_dome_spl(i), T);
 end
 
 hcritair = h_crT(c, rcritair, Tcritair);
 hinfl = h_crT(c, rinfl, Tinfl);
 hmaxcondentherm = h_crT(c, rmaxcondentherm, Tmaxcondentherm);
-hmaxcondenbar = h_crT(c, rmaxcondenbar, rmaxcondenbar);
+hmaxcondenbar = h_crT(c, rmaxcondenbar, Tmaxcondenbar);
 scritair = s_crT(c, rcritair, Tcritair);
 sinfl = s_crT(c, rinfl, Tinfl);
 smaxcondentherm = s_crT(c, rmaxcondentherm, Tmaxcondentherm);
-smaxcondenbar = s_crT(c, rmaxcondenbar, rmaxcondenbar);
+smaxcondenbar = s_crT(c, rmaxcondenbar, Tmaxcondenbar);
 
 % Graph 1: T-s
 figure(1)
-s_q = linspace(min([s_dew,s_bub]), max([s_dew,s_bub]), 100);
-plot(s_q, interp1([s_dew,s_bub], [Tlist, Tlist], s_q, 'spline' ))
+plot(s_dome, Tspline)
 hold on
 scatter(scritair, Tcritair, "k*")
 scatter(sinfl, Tinfl, "*r")
@@ -128,8 +90,7 @@ improvePlot
 
 % Graph 2: T-h
 figure(2)
-h_q = linspace(min([h_dew,h_bub]), max([h_dew,h_bub]), 100);
-plot(h_q, interp1([h_dew,h_bub], [Tlist, Tlist], h_q, 'spline' ))
+plot(h_dome, Tspline)
 hold on
 scatter(hcritair, Tcritair, "k*")
 scatter(hinfl, Tinfl, "*r")
@@ -143,7 +104,7 @@ improvePlot
 
 % Graph 3: P-h
 figure(3)
-plot(h_q, interp1([h_dew,h_bub], [P_dew, P_bub], h_q, 'spline' ))
+semilogy(h_dome, Pspline)
 hold on
 scatter(hcritair, Pcritair, "k*")
 scatter(hinfl, Pinfl, "*r")
@@ -157,7 +118,7 @@ improvePlot
 
 % Graph 4: h-s
 figure(4)
-plot(s_q, interp1([s_dew,s_bub], [h_dew, h_bub], s_q, 'spline' ))
+plot(s_dome, h_dome)
 hold on
 scatter(scritair, hcritair, "k*")
 scatter(sinfl, hinfl, "*r")
