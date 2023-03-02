@@ -1,11 +1,10 @@
 function [q, V, y, x, rg, rf, T] = Flash_zhP(z, h, P)
 % Returns mass quality, vapor mole fraciton, vapor composition, liquid
 % composition, vapor density, liquid density, and temperature for a given
-% mixture of composition z under the vapor dome at enthalpy h and pressure
-% P
+% mixture of composition z under the vapor dome at enthalpy h and pressure P
 
 % NR Parameters
-h_tol = 1e-3*h;
+h_tol = 0.001*h;
 it = 0;
 it_max = 20; % Max NR interations
 Tinc = 0.05; % Temp increment for central finite differences
@@ -39,10 +38,10 @@ while abs(h_guess-h)>h_tol
     h_v_high = h_crT(y_high, rg_high, T+Tinc);
     h_l_high = h_crT(x_high, rf_high, T+Tinc);
     h_high = h_v_high*V_high + (1-V_high)*h_l_high;
-    dhdT = (h_high-h_low)/(2*Tinc);
+    dfdT = ((h_high-h)-(h_low-h))/(2*Tinc);
     
     % Use NR to calculate next Temp step
-    dt = -(h_guess-h)/dhdT;
+    dt = -(h_guess-h)/dfdT;
     T = T + dt;
 
     if T<Tlow
