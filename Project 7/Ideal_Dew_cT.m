@@ -1,4 +1,4 @@
-function [P_dew, rg, rf, x] = Ideal_Dew_cT(c,T)
+function [P_dew, rg, rf, x_res] = Ideal_Dew_cT(c,T)
 % return the ideal dew point given a specified mole fraction vector and
 % temperature
 addpath 'Fundamental Relation Files'
@@ -50,74 +50,124 @@ MW_Ar = 39.948; % (g/mol)
 [Tinfl, rinfl] = Pr_Inflection_c(c);
 Pinfl = P_crT(c,rinfl,Tinfl);
 
-    Pmax = Pcritair;
-    Pmin = Psolidair;
-    x = zeros(N,1);
-    it = 0;
-    failed = 0;
-    while abs(sum(x)-1) > 0.001 || isnan(sum(x))
-        it = it + 1;
-        % Set Pressure
-        P = (Pmax-Pmin)/2 + Pmin;
-        % Get rv of mixture
-        rv = rv_cTP(c,T,P);
-        % Get the chemical potentials of each species in mixture c at rv,T
-        mu_mix_N2 = mui_icrT(N2,c,rv,T); % (J/kmol-species-i)
-        mu_mix_O2 = mui_icrT(O2,c,rv,T);
-        mu_mix_Ar = mui_icrT(Ar,c,rv,T);
-        % Get the bubble point of each species
-        rl_O2 = rl_iTP(O2,T,P);
-        rl_N2 = rl_iTP(N2,T,P);
-        rl_Ar = rl_iTP(Ar,T,P);
-        % Get the chemical potential of each species as pure fluid
-        mu_pure_O2 = mu_irT(O2,rl_O2,T); % (J/kmol)
-        mu_pure_N2 = mu_irT(N2,rl_N2,T);
-        mu_pure_Ar = mu_irT(Ar,rl_Ar,T);
-        % Get the mole fractions
-        x(O2) = exp((mu_mix_O2 - mu_pure_O2)/(Ru*T));
-        x(N2) = exp((mu_mix_N2 - mu_pure_N2)/(Ru*T));
-        x(Ar) = exp((mu_mix_Ar - mu_pure_Ar)/(Ru*T));
-        rho = [rl_N2, rl_O2, rl_Ar];
-        % Get the complement
-        MW_air = x(O2)*MW_O2+x(N2)*MW_N2+x(Ar)*MW_Ar; % (g/mol)
-        mass(O2) = x(O2)*MW_air/1000; % (kg)
-        mass(N2) = x(N2)*MW_air/1000; % (kg)
-        mass(Ar) = x(Ar)*MW_air/1000; % (kg)
-        V(O2) = mass(O2)/rho(2); % (m^3)
-        V(N2) = mass(N2)/rho(1); % (m^3)
-        V(Ar) = mass(Ar)/rho(3); % (m^3)
-        rlc = sum(mass)/sum(V); % (kg/m^3)
-        
-        if isnan(sum(x))
-            Pmax = 0.9*(Pmax-Pmin) + Pmin; % Reduce Pmax to find area without NaNs
-        elseif sum(x) > 1
-            Pmax = P; % Make new P lower
-        else
-            Pmin = P; % Make new P higher
-        end
+Tmax1   = 120; % use 120 instead of Tinfl because of convergence issues
+Tmax2   = 100;
+Tmin    = Tlower;
+steps   = 30;
+dT      = (Tmax1 - Tmin)/steps;
+steps2  = length(Tmin:dT:Tmax2);
+Pmax    = Pcritair;
+Pmin    = Psolidair;
+Prange  = linspace(Pmin,Pmax,500);
 
-        
-        if it>100
-            fprintf("Failed to Find Solution \n")
-            failed = 1;
-            break
+if T > 120
+    P_dew = 0;
+    rf = 0;
+    rg = 0;
+    x_res = c;
+    return
+end
+
+% Setting the hyperparameters.
+m       = 50;      % number of samples
+m_elite = 5;       % number of elites samples
+
+% Get the starting point.
+for n = 1:length(Prange)
+    P = Prange(n);
+    % Get rv of mixture
+    rv(n)           = rv_cTP(c,T,P);
+    if isnan(rv(n))
+        continue
+    end
+    % Get the chemical potentials of each species in mixture c at rv,T
+    mu_mix_N2(n)    = mui_icrT(N2,c,rv(n),T); % (J/kmol-species-i)
+    mu_mix_O2(n)    = mui_icrT(O2,c,rv(n),T);
+    mu_mix_Ar(n)    = mui_icrT(Ar,c,rv(n),T);
+    % Get the bubble point of each species
+    rl_N2(n)        = rl_iTP(N2,T,P);
+    rl_O2(n)        = rl_iTP(O2,T,P);
+    rl_Ar(n)        = rl_iTP(Ar,T,P);
+    % Get the chemical potential of each species as pure fluid
+    mu_pure_N2(n)   = mu_irT(N2,rl_N2(n),T); % (J/kmol)
+    mu_pure_O2(n)   = mu_irT(O2,rl_O2(n),T);
+    mu_pure_Ar(n)   = mu_irT(Ar,rl_Ar(n),T);
+    % Get the mole fractions
+    x(N2,n)         = exp((mu_mix_N2(n) - mu_pure_N2(n))/(Ru*T));
+    x(O2,n)         = exp((mu_mix_O2(n) - mu_pure_O2(n))/(Ru*T));
+    x(Ar,n)         = exp((mu_mix_Ar(n) - mu_pure_Ar(n))/(Ru*T));
+    % Get the sums of x
+    sumx(n)         = sum(x(:,n));            
+end
+[out,idx]   = sort(abs(sumx-1));    % get index of sorted samples
+elite_index = idx(1:m_elite);       % retains the best m_elite samples' indices
+elites      = Prange(elite_index);  % lists elite samples
+avg         = mean(elites);         % calculates new mean of elite samples
+covar       = cov(elites);          % calculates new covariance matrix of elite samples
+
+fprintf('\nWe are making progress!\n')
+sumx_best = 0;
+sumx = [];
+while abs(sumx_best-1) > 0.001 % set tolerance
+    samples = mvnrnd(avg,covar,m); % create multivariate normal distribution
+%         for k = m:-1:1
+%             if (samples(k) > Pcritair || samples(k) < Psolidair)
+%                 samples(k) = []; % discard infeasible samples
+%             end
+%         end
+    for s = 1:length(samples)
+        P = samples(s);
+        % Get rv of mixture
+        rv(s)           = rv_cTP(c,T,P);
+        if isnan(rv(s))
+            continue
         end
+        % Get the chemical potentials of each species in mixture c at rv,T
+        mu_mix_N2(s)    = mui_icrT(N2,c,rv(s),T); % (J/kmol-species-i)
+        mu_mix_O2(s)    = mui_icrT(O2,c,rv(s),T);
+        mu_mix_Ar(s)    = mui_icrT(Ar,c,rv(s),T);
+        % Get the bubble point of each species
+        rl_N2(s)        = rl_iTP(N2,T,P);
+        rl_O2(s)        = rl_iTP(O2,T,P);
+        rl_Ar(s)        = rl_iTP(Ar,T,P);
+        % Get the chemical potential of each species as pure fluid
+        mu_pure_N2(s)   = mu_irT(N2,rl_N2(s),T); % (J/kmol)
+        mu_pure_O2(s)   = mu_irT(O2,rl_O2(s),T);
+        mu_pure_Ar(s)   = mu_irT(Ar,rl_Ar(s),T);
+        % Get the mole fractions
+        x(N2,s)         = exp((mu_mix_N2(s) - mu_pure_N2(s))/(Ru*T));
+        x(O2,s)         = exp((mu_mix_O2(s) - mu_pure_O2(s))/(Ru*T));
+        x(Ar,s)         = exp((mu_mix_Ar(s) - mu_pure_Ar(s))/(Ru*T));
+        % Get the sums of x
+        sumx(s)         = sum(x(:,s));            
     end
-    % Storage for plotting
-    if failed == 1
-        statement = ['Failed to find ideal dew point for T = ',num2str(T)];
-        disp(statement);
-        P_dew = 0;
-        rg = 0;
-        rf = 0;
-        x = c;
-        return
-    end
-    P_dew    = P;
-    rg  = rv;
-    rf  = rlc;
-    XN2_dew  = x(N2);
-    XO2_dew  = x(O2);
-    XAr_dew  = x(Ar);
+    [out,idx]   = sort(abs(sumx-1));    % get index of sorted samples
+    elite_index = idx(1:m_elite);       % retains the best m_elite samples' indices
+    elites      = samples(elite_index); % lists elite samples
+    avg         = mean(elites);         % calculates new mean of elite samples
+    covar       = cov(elites);          % calculates new covariance matrix of elite samples
+    id1         = idx(1);               % index of best sample
+    sumx_best   = sumx(id1);            % closest total mole fractions to 1 so far
+end
+% Get the complement
+MW_air      = x(O2,id1)*MW_O2+x(N2,id1)*MW_N2+x(Ar,id1)*MW_Ar; % (g/mol)
+mass(N2)    = x(N2,id1)*MW_air/1000;    % (kg)
+mass(O2)    = x(O2,id1)*MW_air/1000;    % (kg)
+mass(Ar)    = x(Ar,id1)*MW_air/1000;    % (kg)
+Vol(N2)     = mass(N2)/rl_N2(id1);      % (m^3)
+Vol(O2)     = mass(O2)/rl_O2(id1);      % (m^3)
+Vol(Ar)     = mass(Ar)/rl_Ar(id1);      % (m^3)
+rlc_best    = sum(mass)/sum(Vol);       % (kg/m^3)
+% Storage for plotting
+
+P_dew   = samples(id1);
+rg  = rv(id1);
+rf  = rlc_best;
+XfN2 = x(N2,id1);
+XfO2 = x(O2,id1);
+XfAr = x(Ar,id1);
+x_res = [XfN2
+         XfO2
+         XfAr];
 
 end

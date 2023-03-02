@@ -64,7 +64,7 @@ end
 Pinfl = P_crT(c,rinfl,Tinfl);
 
 
-Temps = linspace(74,Tinfl,10);
+Temps = linspace(60,0.98*Tcritair,10);
 
 for i = 1:length(Temps)
     T = Temps(i);
@@ -86,9 +86,32 @@ for i = 1:length(Temps)
     XAr_bub(i) = x(Ar);
 end
 
+rho_vap_dome = [rho_dew rcritair flip(rho_bub)];
+rho_vap_dome_spl = linspace(rho_dew(1),rho_bub(1),50);
+%rho_vap_spl = [rho_dew(1) rcritair rho_bub(1)];
+rho_comp = [rho_bub_comp rcritair flip(rho_dew_comp)];
+rho_comp_spl = linspace(rho_bub_comp(1),rho_dew_comp(1),50);
+%rho_com_spl = [rho_bub_comp(1) rcritair rho_dew_comp(1)];
+Temps_vap_dome = [Temps Tcritair flip(Temps)];
+%Temps_vap_spl = [Temps(1) Tcritair Temps(length(Temps))];
+
 figure(1)
-plot(rho_dew,Temps,'o');
+
+plot(rcritair,Tcritair,'rd');
 hold on;
-plot(rho_dew_comp,Temps,'o');
-plot(rho_bub,Temps,'o');
-plot(rho_bub_comp,'o');
+plot(rmaxcondentherm,Tmaxcondentherm,'kd')
+plot(rmaxcondenbar,Tmaxcondenbar,'ksquare')
+plot(rinfl,Tinfl,'ro')
+Tspline = interp1(rho_vap_dome,Temps_vap_dome,rho_vap_dome_spl,'spline');
+plot(rho_vap_dome_spl,Tspline,'k');
+Tspline_comp = interp1(rho_comp,Temps_vap_dome,rho_comp_spl,'spline');
+plot(rho_comp_spl,Tspline_comp,'b');
+plot(rho_dew,Temps,'ko');
+plot(rho_dew_comp,Temps,'bo');
+plot(rho_bub,Temps,'ko');
+plot(rho_bub_comp,Temps,'bo');
+hold off;
+xlabel('Density (kg/m^3)');
+ylabel('Temperature (K)');
+title('Ternary Air');
+legend('Critical Point','MaxCondentherm','MaxCondenbar','Inflection Point','Vapor Dome','Complement');
