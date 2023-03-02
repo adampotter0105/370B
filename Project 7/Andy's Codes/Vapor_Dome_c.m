@@ -1,4 +1,4 @@
-function [T_locus, r_locus, Ti, rfi, rgi, rfc, rgc] = Vapor_Dome_c(c)
+function [T_locus, r_locus, Ti, Pfigc, Pgifc, xfigc, xgifc, rfi, rgi, rfc, rgc] = Vapor_Dome_c(c)
 %Vapor_Dome_c returns the T,r locus of the vapor dome, T vector, bubble/dew
 %points vectors, and complementary phase bubble/dew vectors
 %   c = composition
@@ -57,22 +57,32 @@ Pinfl           = P_crT(c,rinfl,Tinfl);
 % Setting the boundaries.
 Tmax    = 0.98*Tinfl;
 Tmin    = Tlower;
-steps   = 15;
+steps   = 10;
 dT      = (Tmax - Tmin)/steps;
 
 % Intialize some variables to store data.
 Ti      = zeros(steps+1,1);
+Pfigc   = zeros(steps+1,1);
+Pgifc   = zeros(steps+1,1);
 rfi     = zeros(steps+1,1);
 rgi     = zeros(steps+1,1);
+rfc     = zeros(steps+1,1);
+rgc     = zeros(steps+1,1);
+xfigc   = zeros(steps+1,3);
+xgifc   = zeros(steps+1,3);
 i       = 1;
 
 % Find the bubble and dew points.
 for T=Tmin:dT:Tmax
     T
     [P rf rg y] = Bubble_cT(c,T);
+    Pfigc(i)    = P;
+    xfigc(i,:)  = y;
     rfi(i)      = rf;
-    rgc(i)      = rg;  
+    rgc(i)      = rg;
     [P rg rf x] = Dew_cT(c,T);
+    Pgifc(i)    = P;
+    xgifc(i,:)  = x;
     rgi(i)      = rg;
     rfc(i)      = rf;
     Ti(i)       = T;
