@@ -9,12 +9,16 @@ it = 0;
 it_max = 20; % Max NR interations
 Tinc = 0.05; % Temp increment for central finite differences
 
-% [Thigh, ~, ~, ~] = Dew_cP(z,P);
-% [Tlow, ~, ~, ~] = Bubble_cP(z,P);
+% Need guesses for T, V, y, rl, rv
+[r1, T1] = rT_ihP(1, h, P);
+[r2, T2] = rT_ihP(2, h, P);
+T = z(1)*T1 + z(2)*T2;
+r = z(1)*r1 + z(2)*r2;
 
-% Initialize T and h
-[~, isp] = max(z);
-[r, T] = rT_ihP(isp, h, P);
+% Set Limits on Temperature
+[Thigh, ~, ~, ~] = Dew_cP(z,P);
+[Tlow, ~, ~, ~] = Bubble_cP(z,P);
+
 h_guess = h_crT(z, r, T);
 
 % Run NR to find T that matches h
@@ -57,3 +61,4 @@ while abs(h_guess-h)>h_tol
 
     it = it + 1;
 end
+fprintf("Found solution for Flash_zhP! \n")

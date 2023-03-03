@@ -83,7 +83,7 @@ rv = rv_cTP(c, 150, 150*1e5);
 h3 = h_crT(c, rv, 150);
 s3 = s_crT(c, rv, 150);
 x3 = c;
-T = 150;
+T3 = 150;
 
 % State 4
 [~, ~, y, x, rg, rf, T] = Flash_zhP(c, h3, 5*1e5);
@@ -100,7 +100,7 @@ rv = rv_cTP(y, T_amb, 5*1e5);
 h5 = h_crT(y, rv, T_amb);
 s5 = s_crT(y, rv, T_amb);
 x5 = y;
-T5 = T_am;
+T5 = T_amb;
 
 % State 6
 [~, ~, y, x, rg, rf, T] = Flash_zhP(y, h5, 1e5);
@@ -180,7 +180,7 @@ end
 
 % Put splines through the bubble and dew data in the composition direction.
 [row col] = size(Tdew);
-for j=2:3
+for j=[1 3]
     plot3(sdewSpline(j,:)/1e3,xN2Spline,TdewSpline(j,:),'b-','LineWidth',2)
     plot3(sbubSpline(j,:)/1e3,xN2Spline,TbubSpline(j,:),'b-','LineWidth',2)
     drawnow
@@ -192,7 +192,7 @@ P_surfaces = Plist
 % Add isobars.
 for i=1:1:NCS
     % Do the points below the dome.
-    for j=2:3
+    for j=[1 3]
         plot3(sisoPlow(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,j,i),'b-','LineWidth',2)
         plot3(sisoPhigh(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,j,i),'b-','LineWidth',2)
         drawnow
