@@ -43,7 +43,9 @@ while abs(h_guess-h)>h_tol
     h_l_high = h_crT(x_high, rf_high, T+Tinc);
     h_high = h_v_high*V_high + (1-V_high)*h_l_high;
     dfdT = ((h_high-h)-(h_low-h))/(2*Tinc);
-    
+    h
+    h_guess
+    (h_guess-h)
     % Use NR to calculate next Temp step
     dt = -(h_guess-h)/dfdT;
     T = T + dt;
@@ -54,7 +56,7 @@ while abs(h_guess-h)>h_tol
         T = 0.5*(Thigh-Tlast) + Tlast;
     end
     
-    if it<it_max
+    if it>it_max
         fprintf("Flash_zhP failed to converge!! \n")
         break
     end
