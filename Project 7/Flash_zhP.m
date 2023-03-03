@@ -11,7 +11,7 @@ Tinc = 0.05; % Temp increment for central finite differences
 
 % Need guesses for T, V, y, rl, rv
 [r1, T1] = rT_ihP(1, h, P);
-[r2, T2] = rT_ihP(2, 0.9*h, P);
+[r2, T2] = rT_ihP(2, h, P);
 T = z(1)*T1 + z(2)*T2;
 r = z(1)*r1 + z(2)*r2;
 

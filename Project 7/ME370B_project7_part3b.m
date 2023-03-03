@@ -96,14 +96,14 @@ x4_v = y;
 T4 = T;
 
 % State 5
-rv = rv_cTP(y, T_amb, 5*1e5);
-h5 = h_crT(y, rv, T_amb);
-s5 = s_crT(y, rv, T_amb);
-x5 = y;
+rv = rv_cTP(x, T_amb, 5*1e5);
+h5 = h_crT(x, rv, T_amb);
+s5 = s_crT(x, rv, T_amb);
+x5 = x;
 T5 = T_amb;
 
 % State 6
-[~, ~, y, x, rg, rf, T] = Flash_zhP(y, h5, 1e5);
+[~, ~, y, x, rg, rf, T] = Flash_zhP(x, h5, 1e5);
 h6_l = h_crT(x, rf, T);
 h6_v = h_crT(y, rg, T);
 s6_l = s_crT(x, rf, T);
@@ -128,9 +128,9 @@ ylabel('Nitrogen Mole Fraction','rotation',0)
 zlabel('Temperature (K)')
 
 % Collect Variables into arrays
-x_vap = [x1(N2), x2(N2), x3(N2), x4_v(N2), x5(N2)];%, x6_v(N2), x7(N2)];
-s_vap = [s1, s2, s3, s4_v, s5];%, s6_v, s7];
-T_vap = [T1, T2, T3, T4, T5];%, T6, T7];
+x_vap = [x1(N2), x2(N2), x3(N2), x4_v(N2), x5(N2), x6_v(N2), x7(N2)];
+s_vap = [s1, s2, s3, s4_v, s5, s6_v, s7];
+T_vap = [T1, T2, T3, T4, T5, T6, T7];
 x_liq1 = [x3(N2), x4_l(N2)];
 s_liq1 = [s3, s4_l];
 T_liq1 = [T3, T4];
@@ -157,7 +157,7 @@ drawnow
 % Plot Cycle
 plot3(s_vap/1e3, x_vap, T_vap, "ro--")
 plot3(s_liq1/1e3, x_liq1, T_liq1, "ro--")
-%plot3(s_liq2, x_liq2, T_liq2, "r--")
+plot3(s_liq2, x_liq2, T_liq2, "r--")
 
 % Tell the user the composition planes to be shown.
 xN2_planes = clist;
