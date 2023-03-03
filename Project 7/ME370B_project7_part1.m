@@ -93,6 +93,18 @@ XAr_bubble = zeros(steps+1,1); % mole fraction Ar
 search_fail_dew = zeros(steps+1,1); % 1 if the loop failed to faind a solution
 search_fail_bubble = zeros(steps+1,1); % 1 if the loop failed to faind a solution
 
+P_dew_ideal = zeros(steps+1,1);
+rg_dew_ideal = zeros(steps+1,1);
+rf_dew_ideal = zeros(steps+1,1);
+xN2_dew_ideal = zeros(steps+1,1);
+xO2_dew_ideal = zeros(steps+1,1);
+xAr_dew_ideal = zeros(steps+1,1);
+P_bub_ideal = zeros(steps+1,1);
+rg_bub_ideal = zeros(steps+1,1);
+rf_bub_ideal = zeros(steps+1,1);
+xN2_bub_ideal = zeros(steps+1,1);
+xO2_bub_ideal = zeros(steps+1,1);
+xAr_bub_ideal = zeros(steps+1,1);
 %% Dew Point
 
 for T=Tmin:dT:Tmax
@@ -150,6 +162,7 @@ for T=Tmin:dT:Tmax
             break
         end
     end
+
     % Storage for plotting
     search_fail_dew(i) = failed;
     Tplot(i)    = T;
@@ -160,6 +173,16 @@ for T=Tmin:dT:Tmax
     XO2_dew(i)  = x(O2);
     XAr_dew(i)  = x(Ar);
     i = i+1;
+    
+    if ~failed
+        [P rg rf x] = Dew_cT(c,T,P, x, rlc, rv);
+        P_dew_ideal(i) = P;
+        rg_dew_ideal(i) = rg;
+        rf_dew_ideal(i) = rf;
+        xN2_dew_ideal(i) = x(N2);
+        xO2_dew_ideal(i) = x(O2);
+        xAr_dew_ideal(i) = x(Ar);
+    end
 end
 
 %% Bubble Point
@@ -221,6 +244,7 @@ for T=Tmin:dT:Tmax
             break
         end
     end
+    
     % Storage for plotting
     search_fail_bubble(i) = failed;
     Tplot(i)    = T;
@@ -231,19 +255,32 @@ for T=Tmin:dT:Tmax
     XO2_bubble(i)  = x(O2);
     XAr_bubble(i)  = x(Ar);
     i = i+1;
+    if ~failed
+        [P rg, rf, x] = Bubble_cT(c,T,P, x, rl, rvc);
+        P_bub_ideal(i) = P;
+        rg_bub_ideal(i) = rg;
+        rf_bub_ideal(i) = rf;
+        xN2_bub_ideal(i) = x(N2);
+        xO2_bub_ideal(i) = x(O2);
+        xAr_bub_ideal(i) = x(Ar);
+    end
 end
 
 % Graph 1
 figure(1)
-scatter(rfiplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble))
+scatter(rfiplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble), "b")
 hold on
-scatter(rgcplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble))
-scatter(rgiplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew))
-scatter(rfcplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew))
+scatter(rgcplot.*(1-search_fail_bubble), Tplot.*(1-search_fail_bubble), "b")
+scatter(rgiplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew), "r")
+scatter(rfcplot.*(1-search_fail_dew), Tplot.*(1-search_fail_dew), "r")
 scatter(rcritair, Tcritair, "k*")
 scatter(rinfl, Tinfl, "*r")
 scatter(rmaxcondenbar, Tmaxcondenbar, "*b")
 scatter(rmaxcondentherm, Tmaxcondentherm, "*g")
+plot(rf_dew_ideal, Tplot, "r")
+plot(rg_dew_ideal, Tplot, "r")
+plot(rf_bub_ideal, Tplot, "b")
+plot(rg_bub_ideal, Tplot, "b")
 legend(["Bubble", "Bubble Complement" ,"Dew", "Dew Complement", "Crit Point", "Inflection Pnt", "Max Condenbar", "Max Condentherm"])
 hold off
 xlabel("Density (kg/m^3)")
@@ -254,15 +291,19 @@ improvePlot
 
 % Graph 2
 figure(2)
-scatter(rfiplot.*(1-search_fail_bubble), P_bubble.*(1-search_fail_bubble)/1e6)
+scatter(rfiplot.*(1-search_fail_bubble), P_bubble.*(1-search_fail_bubble)/1e6, "b")
 hold on
-scatter(rgcplot.*(1-search_fail_bubble), P_bubble.*(1-search_fail_bubble)/1e6)
-scatter(rgiplot.*(1-search_fail_dew), P_dew.*(1-search_fail_dew)/1e6)
-scatter(rfcplot.*(1-search_fail_dew), P_dew.*(1-search_fail_dew)/1e6)
+scatter(rgcplot.*(1-search_fail_bubble), P_bubble.*(1-search_fail_bubble)/1e6, "b")
+scatter(rgiplot.*(1-search_fail_dew), P_dew.*(1-search_fail_dew)/1e6, "r")
+scatter(rfcplot.*(1-search_fail_dew), P_dew.*(1-search_fail_dew)/1e6, "r")
 scatter(rcritair, Pcritair/1e6, "k*")
 scatter(rinfl, Pinfl/1e6, "*r")
 scatter(rmaxcondenbar, Pmaxcondenbar/1e6, "*b")
 scatter(rmaxcondentherm, Pmaxcondentherm/1e6, "*g")
+plot(rf_dew_ideal, P_dew_ideal/1e6, "r")
+plot(rg_dew_ideal, P_dew_ideal/1e6, "r")
+plot(rf_bub_ideal, P_bub_ideal/1e6, "b")
+plot(rg_bub_ideal, P_bub_ideal/1e6, "b")
 legend(["Bubble", "Bubble Complement" ,"Dew", "Dew Complement", "Crit Point", "Inflection Pnt", "Max Condenbar", "Max Condentherm"])
 hold off
 xlabel("Density (kg/m^3)")
@@ -274,10 +315,16 @@ figure(3)
 scatter(rgcplot.*(1-search_fail_bubble), XN2_bubble.*(1-search_fail_bubble), "r")
 hold on
 scatter(rgcplot.*(1-search_fail_bubble), XO2_bubble.*(1-search_fail_bubble), "g")
-scatter(rgcplot.*(1-search_fail_bubble), XAr_bubble.*(1-search_fail_bubble), "b")
+scatter(rgcplot.*(1-search_fail_bubble), 10*XAr_bubble.*(1-search_fail_bubble), "b")
 scatter(rfcplot.*(1-search_fail_dew), XN2_dew.*(1-search_fail_dew), "r")
 scatter(rfcplot.*(1-search_fail_dew), XO2_dew.*(1-search_fail_dew), "g")
 scatter(rfcplot.*(1-search_fail_dew), 10*XAr_dew.*(1-search_fail_dew), "b")
+plot(rf_dew_ideal, xN2_dew_ideal, "r")
+plot(rf_dew_ideal, xO2_dew_ideal, "g")
+plot(rf_dew_ideal, 10*xAr_dew_ideal, "b")
+plot(rf_bub_ideal, xN2_bub_ideal, "r")
+plot(rf_bub_ideal, xO2_bub_ideal, "g")
+plot(rf_bub_ideal, 10*xAr_bub_ideal, "b")
 legend("Nitrogen", "Oxygen", "10*Argon")
 hold off
 xlabel("Complimentary Phase Density (kg/m^3)")
