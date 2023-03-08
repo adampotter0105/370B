@@ -9,9 +9,9 @@ function [Q, vapout, liqin] = Reboiler_xqP(x_boil,q_boil,P_boil)
 %           liqin: P, mdot, ndot, h, c (1xN array)
 
 N = length(x_boil);
-MW_O2 = 31.999; % (g/mol)
-MW_N2 = 28.0134; % (g/mol)
-MW_Ar = 39.948; % (g/mol)
+MW_O2 = 0.031999; % (kg/mol)
+MW_N2 = 0.0280134; % (kg/mol)
+MW_Ar = 0.039948; % (kg/mol)
 
 if sum(x_boil) ~= 1
     fprintf("Input composition doe not sum to unity!! \n")
@@ -30,8 +30,8 @@ else
 end
 mdot_liq = 1-q_boil;
 mdot_vap = q_boil;
-ndot_liq = mdot_liq / sum(MW.*x_boil); % mass flow of liquid outut
-ndot_vap = mdot_vap / sum(MW.*y_boil); % kg/(kg/kmol/s) = kmol/s  mol flow of vapor output
+ndot_liq = mdot_liq / dot(MW, x_boil); % mass flow of liquid outut
+ndot_vap = mdot_vap / dot(MW, y_boil); % kg/(kg/kmol/s) = kmol/s  mol flow of vapor output
 mdot_in = mdot_vap + mdot_liq;
 ndot_in = ndot_vap + ndot_liq;
 
@@ -46,7 +46,7 @@ x_in = x_in/sum(x_in); % normalize values
 h_vap = h_crT(y_boil, rv_boil, T_boil);
 h_out = h_crT(x_boil, rl_boil, T_boil);
 h_in = h_crT(x_in, rl_in, T_in);
-Q = (h_out*mdot_liq + h_vap*mdot_vap - h_in*mdot_in)/1e3; % joules per kmol/s liquid out
+Q = (h_out*mdot_liq + h_vap*mdot_vap - h_in*mdot_in); % joules per kmol/s liquid out
 
 % Package into structs
 vapout.P = P_boil;

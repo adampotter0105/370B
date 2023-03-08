@@ -30,7 +30,6 @@ vap_mdot_high = 10*vapout.mdot; % MAY NEED TO CHANGE
 % NR Optimization Parameters
 mdotinc = vapout.mdot*1e-3; % increment on mass flow rate
 Qtoler = 1; % Evaluation criteria
-mdotlast = vapout.mdot; % Initialized as the guess
 
 % Column in assumed to be isobaric
 liqin.P = vapin.P;
@@ -44,7 +43,7 @@ imax = 15; % max NR iterations
 vapout.h = h_crT(vapout.c,vapout.r,vapout.T);
 
 %% Begin NR Loop
-for i = 1:1:imax
+for i = 1:imax
     vapout.mdot
     % Find capout moles from mass
     vapout.ndot = vapout.mdot/dot(vapout.c,MW);
@@ -62,10 +61,11 @@ for i = 1:1:imax
     liqin.h = h_crT(liqin.c,liqin.r,liqin.T);
     
     % Find net energy imbalance, for adiabatic tray should be zero
-    Q = liqin.h*liqin.mdot + vapin.h*vapin.mdot - vapout.h*vapout.mdot - liqout.h*liqout.mdot;
+    Q = liqin.h*liqin.mdot + vapin.h*vapin.mdot - vapout.h*vapout.mdot - liqout.h*liqout.mdot
     
     % Check if successfully converged
     if abs(Q) < Qtoler
+        disp("Found viable solution for upTray! ")
         return
     end
     
