@@ -69,6 +69,9 @@ h3 = h_crT(c, rl3, T3);
 % State 4: Air flashed to 1 bar
 P4 = 1e5;
 [T4, q4, V4, y4, x4, rg4, rf4] = Flash_zhP(c, h3, P4);
+s4l = s_crT(x4, rf4, T4);
+s4v = s_crT(y4, rg4, T4);
+s4 = s4v*q4 + s4l*(1-q4);
 
 %% Now iterate over output composition until column top matches air flash
 
@@ -129,3 +132,86 @@ while true
 end
 
 x_out
+
+% Assemble Data for Plotting
+% Data from flashing air process
+T_cycle = [T1, T1, T3, T4];
+s_cycle = [s1, s2, s3, s4];
+x_cycle = [c(N2), c(N2), c(N2), q4*y4(N2)+(1-q4)*x4(N2)]; % overall composition
+% Data for tie lines
+x_vap = [y4(N2)];
+x_liq = [x4(N2)];
+
+% Data for average
+for i = 1:length(vapout)-1
+    T_cycle(i+4) = vapout(i).T; % Append to temps above
+    xv = vapout(i).c(N2);
+    xl = liqin(i+1).c(N2); % TODO: double check this
+    x_vap(i+1) = xv;
+    x_liq(i+1) = xl;
+    % TODO: Find quality of tray in order to find overall composition (x) and
+    % entropy (s)
+    
+    
+end
+% TODO: For bottom tray (reboiler) use x_out for liq
+xl = x_out(N2);
+
+%% Start Plotting, include vapor dome data
+% Load a file to save recalculating things up to here.
+load Tsx_Data
+
+% We will build the surface as we go.  Start a figure and put it on hold.
+figure(1)
+clf
+hold on
+ylabel('Nitrogen Mole Fraction','rotation',0)
+xlabel('Specific Entropy (kJ/kg-K)','rotation',0)
+zlabel('Temperature (K)')
+view([-10 40])
+axis([2 7 0 1 60 300])
+grid on
+drawnow
+
+% Plot Cycle TODO: Plot cycles for data above
+
+
+% Tell the user the composition planes to be shown.
+xN2_planes = clist;
+
+% Show the P-rho critical locus on the plot.
+plot3(sc/1e3,xN2,Tc,'kx','LineWidth',2)
+
+% Add domes at each plane.
+for i=1:1:NCS
+    plot3(sdome(i,:)/1e3,xN2(i)*ones(1,length(sdome)),Tdome(i,:),'k-','LineWidth',2)
+    drawnow
+end
+
+% Add dew and bubble points.
+for i=1:1:NCS
+    plot3(sdew(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tdew(i,:),'b.','LineWidth',2)
+    plot3(sbub(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tbub(i,:),'b.','LineWidth',2)
+    drawnow
+end
+
+% Put splines through the bubble and dew data in the composition direction.
+[row col] = size(Tdew);
+plot3(sdewSpline(1,:)/1e3,xN2Spline,TdewSpline(1,:),'b-','LineWidth',2)
+plot3(sbubSpline(1,:)/1e3,xN2Spline,TbubSpline(1,:),'b-','LineWidth',2)
+drawnow
+
+% Tell the user the pressure surfaces to be shown.
+P_surfaces = Plist;
+
+% Add isobars.
+for i=1:1:NCS
+    % Do the points below the dome.
+    plot3(sisoPlow(:,1,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,1,i),'b-','LineWidth',2)
+    plot3(sisoPhigh(:,1,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,1,i),'b-','LineWidth',2)
+    drawnow
+end
+
+% Finished with the dynamic plot.  Close it out.
+hold off
+improvePlot
