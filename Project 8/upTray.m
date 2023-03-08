@@ -12,6 +12,14 @@ MW_O2 = .031999; % (kg/mol)
 MW_N2 = .0280134; % (kg/mol)
 MW_Ar = .039948; % (kg/mol)
 
+% Find mass flow using quality of output
+N = length(vapin.c);
+if N == 2 % Accomodate binary and ternary air
+    MW = [MW_N2, MW_O2];
+else 
+    MW = [MW_N2, MW_O2, MW_Ar];
+end
+
 % Guess mass flow rate of vapout
 vapout.mdot = vapin.mdot;
 
@@ -39,17 +47,15 @@ vapout.h = h_crT(vapout.c,vapout.r,vapout.T);
 for i = 1:1:imax
     vapout.mdot
     % Find capout moles from mass
-    vapout.ndot = vapout.mdot/(MW_N2*vapout.c(N2)+MW_O2*vapout.c(O2)+MW_Ar*vapout.c(Ar));
+    vapout.ndot = vapout.mdot/dot(vapout.c,MW);
     
     % Mass in = mass out, find liqin mass from guess vapout
     liqin.mdot = liqout.mdot + vapout.mdot - vapin.mdot;
     
     % Moles in = moles out
-    liqin.c(N2) = ( vapout.c(N2)*vapout.ndot + liqout.c(N2)*liqout.ndot - vapin.c(N2)*vapin.ndot );
-    liqin.c(O2) = ( vapout.c(O2)*vapout.ndot + liqout.c(O2)*liqout.ndot - vapin.c(O2)*vapin.ndot );
-    liqin.c(Ar) = ( vapout.c(Ar)*vapout.ndot + liqout.c(Ar)*liqout.ndot - vapin.c(Ar)*vapin.ndot );
+    liqin.c = vapout.c*vapout.ndot + liqout.c*liqout.ndot - vapin.c*vapin.ndot;
     liqin.c = liqin.c/sum(liqin.c); % Normalize composition
-    liqin.ndot = liqin.mdot/(MW_N2*liqin.c(N2)+MW_O2*liqin.c(O2)+MW_Ar*liqin.c(Ar));
+    liqin.ndot = liqin.mdot/dot(liqin.c, MW);
     
     % check if this is right method for enthalpy??
     [liqin.T,liqin.r,~,~] = Fast_Bubble_cP(liqin.c,liqin.P);
@@ -70,15 +76,13 @@ for i = 1:1:imax
     %% LOW INCREMENT
     mdotlow = vapout.mdot - mdotinc;
     % Find capout moles from mass
-    vapout_ndot = mdotlow/(MW_N2*vapout.c(N2)+MW_O2*vapout.c(O2)+MW_Ar*vapout.c(Ar));
+    vapout_ndot = mdotlow/dot(vapout.c,MW);
     
     % Mass in = mass out, find liqin mass from guess vapout
     liqin_mdot = liqout.mdot + mdotlow - vapin.mdot;
     
     % Moles in = moles out
-    liqin_c(N2) = ( vapout.c(N2)*vapout_ndot + liqout.c(N2)*liqout.ndot - vapin.c(N2)*vapin.ndot );
-    liqin_c(O2) = ( vapout.c(O2)*vapout_ndot + liqout.c(O2)*liqout.ndot - vapin.c(O2)*vapin.ndot );
-    liqin_c(Ar) = ( vapout.c(Ar)*vapout_ndot + liqout.c(Ar)*liqout.ndot - vapin.c(Ar)*vapin.ndot );
+    liqin_c = vapout.c*vapout_ndot + liqout.c*liqout.ndot - vapin.c*vapin.ndot;
     liqin_c = liqin_c/sum(liqin_c); % Normalize composition
 
     % check if this is right method for enthalpy??
@@ -91,15 +95,13 @@ for i = 1:1:imax
     %% HIGH INCREMENT
     mdothigh = vapout.mdot + mdotinc;
     % Find capout moles from mass
-    vapout_ndot = mdothigh/(MW_N2*vapout.c(N2)+MW_O2*vapout.c(O2)+MW_Ar*vapout.c(Ar));
+    vapout_ndot = mdothigh/dot(vapout.c,MW);
     
     % Mass in = mass out, find liqin mass from guess vapout
     liqin_mdot = liqout.mdot + mdothigh - vapin.mdot;
     
     % Moles in = moles out
-    liqin_c(N2) = ( vapout.c(N2)*vapout_ndot + liqout.c(N2)*liqout.ndot - vapin.c(N2)*vapin.ndot );
-    liqin_c(O2) = ( vapout.c(O2)*vapout_ndot + liqout.c(O2)*liqout.ndot - vapin.c(O2)*vapin.ndot );
-    liqin_c(Ar) = ( vapout.c(Ar)*vapout_ndot + liqout.c(Ar)*liqout.ndot - vapin.c(Ar)*vapin.ndot );
+    liqin_c = vapout.c*vapout_ndot + liqout.c*liqout.ndot - vapin.c*vapin.ndot;
     liqin_c = liqin_c/sum(liqin_c); % Normalize composition
 
     % check if this is right method for enthalpy??
