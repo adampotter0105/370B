@@ -24,9 +24,9 @@ rupper          = rsolidair;
 % Lower limit to stay just above solid air:
 Tlower          = 60;           % K
 % Molar masses
-MW_O2 = 31.999; % (g/mol)
-MW_N2 = 28.0134; % (g/mol)
-MW_Ar = 39.948; % (g/mol)
+MW_O2 = 0.031999; % (g/mol)
+MW_N2 = 0.0280134; % (g/mol)
+MW_Ar = 0.039948; % (g/mol) 
 
 Setup_Air_Props
 
@@ -62,14 +62,14 @@ end
 % PLOTS
 
 figure(1)
-plot(qualities, N2_vapout, '-o');
+plot(qualities, N2_vapout, 'r-o');
 hold on;
-plot(qualities, O2_vapout,'-o');
-plot(qualities, Ar_vapout,'-o');
-plot(qualities, N2_liqin,'-o');
-plot(qualities, O2_liqin,'-o');
-plot(qualities, Ar_liqin,'-o');
+plot(qualities, O2_vapout,'g-o');
+plot(qualities, Ar_vapout,'b-o');
+plot(qualities, N2_liqin,'r--o');
+plot(qualities, O2_liqin,'g--o');
+plot(qualities, Ar_liqin,'b--o');
 legend('N2 Vapor Out','O2 Vapor Out','Ar Vapor Out','N2 Liquid In','O2 Liquid In','Ar Liquid In');
 hold off;
-
+improvePlot
 
