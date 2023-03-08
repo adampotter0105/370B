@@ -54,12 +54,16 @@ vapout.h = h_vap;
 vapout.c = y_boil;
 vapout.mdot = mdot_vap;
 vapout.ndot = ndot_vap;
+vapout.r = rv_boil;
+vapout.T = T_boil;
 
 liqin.P = P_boil;
 liqin.h = h_in;
 liqin.c = x_in;
 liqin.mdot = mdot_in;
 liqin.ndot = ndot_in;
+liqin.r = rl_in;
+liqin.T = T_in;
 
 
 end
