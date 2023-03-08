@@ -33,6 +33,7 @@ mdot_vap = q_boil;
 ndot_liq = mdot_liq / sum(MW.*x_boil); % mass flow of liquid outut
 ndot_vap = mdot_vap / sum(MW.*y_boil); % kg/(kg/kmol/s) = kmol/s  mol flow of vapor output
 mdot_in = mdot_vap + mdot_liq;
+ndot_in = ndot_vap + ndot_liq;
 
 % Determine input composition
 x_in = ndot_liq*x_boil + ndot_vap*y_boil;
