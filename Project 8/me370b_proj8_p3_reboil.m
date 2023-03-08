@@ -176,13 +176,14 @@ grid on
 drawnow
 
 % Plot Cycle TODO: Plot cycles for data above
-
+plot3(s_cycle/1e3,x_cycle,T_cycle,'-or','LineWidth',2);
+drawnow
 
 % Tell the user the composition planes to be shown.
 xN2_planes = clist;
 
 % Show the P-rho critical locus on the plot.
-plot3(sc/1e3,xN2,Tc,'kx','LineWidth',2)
+% plot3(sc/1e3,xN2,Tc,'kx','LineWidth',2)
 
 % Add domes at each plane.
 for i=1:1:NCS
