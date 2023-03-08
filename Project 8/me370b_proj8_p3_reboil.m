@@ -62,9 +62,9 @@ s2 = s_crT(c, rv2, T2);
 % State 3: Air Cooled isobarically to 130k
 T3 = 130;
 P3 = P2;
-rv3 = rv_cTP(c,T3, P3);
-s3 = s_crT(c, rv3, T3);
-h3 = h_crT(c, rv3, T3);
+rl3 = rl_cTP(c,T3, P3);
+s3 = s_crT(c, rl3, T3);
+h3 = h_crT(c, rl3, T3);
 
 % State 4: Air flashed to 1 bar
 P4 = 1e5;
@@ -73,12 +73,12 @@ P4 = 1e5;
 %% Now iterate over output composition until column top matches air flash
 
 % Column Parameters
-n_trays = 3;
+n_trays = 10;
 reboil_quality = 0.6;
 P_col = 1e5;
 
 % NR Parameters
-imax = 10; i = 0;
+imax = 100; i = 0;
 x_inc = 1e-3;
 err_tol = 1e-3;
 
@@ -123,6 +123,9 @@ while true
         break
     elseif err < err_tol
         disp("Successfully solved for outlet composition")
+        break
     end
 
 end
+
+x_out
