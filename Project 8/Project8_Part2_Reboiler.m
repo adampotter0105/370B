@@ -44,9 +44,20 @@ Q = NaN(1, length(qualities));
 N2_vapout = zeros(1,length(qualities));
 O2_vapout = zeros(1,length(qualities));
 Ar_vapout = zeros(1,length(qualities));
+N2_vapin = zeros(1,length(qualities));
+O2_vapin = zeros(1,length(qualities));
+Ar_vapin = zeros(1,length(qualities));
 N2_liqin = zeros(1,length(qualities));
 O2_liqin = zeros(1,length(qualities));
 Ar_liqin = zeros(1,length(qualities));
+N2_liqout = zeros(1,length(qualities));
+O2_liqout = zeros(1,length(qualities));
+Ar_liqout = zeros(1,length(qualities));
+T_liqin = zeros(1,length(qualities));
+T_vapin = zeros(1,length(qualities));
+T_liqout = zeros(1,length(qualities));
+tray_quality = zeros(1,length(qualities));
+tray_quality_mole = zeros(1,length(qualities));
 
 for i = 1:length(qualities)
     [Q(i), vapor(i), liquid(i)] = Reboiler_xqP(x_boil, qualities(i), P_boil);
@@ -54,22 +65,66 @@ for i = 1:length(qualities)
     N2_vapout(i) = vapout_tray(i).c(N2);
     O2_vapout(i) = vapout_tray(i).c(O2);
     Ar_vapout(i) = vapout_tray(i).c(Ar);
+    N2_vapin(i) = vapor(i).c(N2);
+    O2_vapin(i) = vapor(i).c(O2);
+    Ar_vapin(i) = vapor(i).c(Ar);
     N2_liqin(i) = liqin_tray(i).c(N2);
     O2_liqin(i) = liqin_tray(i).c(O2);
     Ar_liqin(i) = liqin_tray(i).c(Ar);
+    N2_liqout(i) = liquid(i).c(N2);
+    O2_liqout(i) = liquid(i).c(O2);
+    Ar_liqout(i) = liquid(i).c(Ar);
+    T_liqin(i) = liqin_tray(i).T;
+    T_vapin(i) = vapor(i).T;
+    T_liqout(i) = liquid(i).T;
+    tray_quality(i) = vapout_tray(i).mdot/(vapout_tray(i).mdot + liquid(i).mdot);
+    tray_quality_mole(i) = vapout_tray(i).ndot/(vapout_tray(i).ndot + liquid(i).ndot);
 end
 
 % PLOTS
 
 figure(1)
-plot(qualities, N2_vapout, '-o');
+plot(qualities, N2_liqin, 'b');
 hold on;
-plot(qualities, O2_vapout,'-o');
-plot(qualities, Ar_vapout,'-o');
-plot(qualities, N2_liqin,'-o');
-plot(qualities, O2_liqin,'-o');
-plot(qualities, Ar_liqin,'-o');
-legend('N2 Vapor Out','O2 Vapor Out','Ar Vapor Out','N2 Liquid In','O2 Liquid In','Ar Liquid In');
+plot(qualities, O2_liqin,'r');
+plot(qualities, Ar_liqin*10,'g');
+plot(qualities, N2_vapout, '--k','LineWidth',1.5);
+plot(qualities, N2_liqin, 'k');
+plot(qualities, N2_vapout, 'ok');
+plot(qualities, N2_vapin, '+k');
+
+plot(qualities, N2_vapout, '--ob','LineWidth',1.5);
+plot(qualities, O2_vapout,'--or','LineWidth',1.5);
+plot(qualities, Ar_vapout*10,'--og','LineWidth',1.5);
+plot(qualities, N2_liqin,'-ob','LineWidth',1.5);
+plot(qualities, O2_liqin,'-or','LineWidth',1.5);
+plot(qualities, Ar_liqin*10,'-og','LineWidth',1.5);
+plot(qualities, N2_vapin, '--+b','LineWidth',1.5);
+plot(qualities, O2_vapin, '--+r','LineWidth',1.5);
+plot(qualities, Ar_vapin*10, '--+g','LineWidth',1.5);
+plot(qualities, N2_liqout, '-+b','LineWidth',1.5);
+plot(qualities, O2_liqout, '-+r','LineWidth',1.5);
+plot(qualities, Ar_liqout*10, '-+g','LineWidth',1.5);
+legend('N2','O2','Ar*10','Vapor','Liquid','Above','Below');
+xlabel('Reboiler Outlet Quality');
+ylabel('Mole Fraction')
 hold off;
 
+figure(2)
+plot(qualities, T_liqin, '-o','LineWidth',1.5);
+hold on;
+plot(qualities, T_vapin, '-o','LineWidth',1.5);
+plot(qualities, T_liqout, '-o','LineWidth',1.5);
+legend('Liquid Above','Vapor Below','Saturation Outlet');
+xlabel('Reboiler Outlet Quality');
+ylabel('Temperature (K)');
+hold off;
 
+figure(3)
+plot(qualities,tray_quality,'--o','LineWidth',1.5);
+hold on;
+plot(qualities,tray_quality_mole,'-o','LineWidth',1.5);
+xlabel('Reboiler Outlet Quality');
+ylabel('Tray Outlet Quality');
+legend('Mass Quality', 'Mole Quality');
+hold on;
