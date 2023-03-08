@@ -149,9 +149,11 @@ for i = 1:length(vapout)-1
     xl = liqin(i+1).c(N2); % TODO: double check this
     x_vap(i+1) = xv;
     x_liq(i+1) = xl;
-    % TODO: Find quality of tray in order to find overall composition (x) and
-    % entropy (s)
-    
+    qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i+1).mdot);
+    x_tot = xv*qual_tray + xl*(1-qual_tray);
+    x_cycle(i+4) = x_tot;
+    r_tot = vapout(i).r*qual_tray + liqin(i+1).r*(1-qual_tray); % check this
+    s_cycle(i+4) = s_crT(x_tot,r_tot,vapout(i).T);
     
 end
 % TODO: For bottom tray (reboiler) use x_out for liq
