@@ -77,7 +77,7 @@ s4 = s4v*q4 + s4l*(1-q4);
 
 % Column Parameters
 n_trays = 10;
-reboil_quality = 0.6;
+reboil_quality = 0.7;
 P_col = 1e5;
 
 % NR Parameters
@@ -138,30 +138,38 @@ x_out
 T_cycle = [T1, T1, T3, T4];
 s_cycle = [s1, s2, s3, s4];
 x_cycle = [c(N2), c(N2), c(N2), q4*y4(N2)+(1-q4)*x4(N2)]; % overall composition
+T_tray = zeros(1,n_trays);
+x_tray = zeros(1,n_trays);
+s_tray = zeros(1,n_trays);
 % Data for tie lines
 x_vap = [y4(N2)];
 x_liq = [x4(N2)];
 
 % Data for average
 for i = 1:length(vapout)-1
-    T_cycle(i+4) = vapout(i).T; % Append to temps above
+    T_tray(i) = vapout(i).T; % Append to temps above
     xv = vapout(i).c(N2);
     xl = liqin(i+1).c(N2); % TODO: double check this
     x_vap(i+1) = xv;
     x_liq(i+1) = xl;
     qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i+1).mdot);
     x_tot = xv*qual_tray + xl*(1-qual_tray);
-    x_cycle(i+4) = x_tot;
+    x_tray(i) = x_tot;
     r_tot = vapout(i).r*qual_tray + liqin(i+1).r*(1-qual_tray); % check this
-    s_cycle(i+4) = s_crT(x_tot,r_tot,vapout(i).T);
+    s_tray(i) = s_crT(x_tot,r_tot,vapout(i).T);
+    % TODO: Find quality of tray in order to find overall composition (x) and
+    % entropy (s)
+    
     
 end
 % TODO: For bottom tray (reboiler) use x_out for liq
-xl = x_out(N2);
 
-%% Start Plotting, include vapor dome data
+
+T_plot = [T_cycle flip(T_tray)];
+x_plot = [x_cycle flip(x_tray)];
+s_plot = [s_cycle flip(s_tray)];
+% Start Plotting, include vapor dome data
 % Load a file to save recalculating things up to here.
-load Tsx_Data
 
 % We will build the surface as we go.  Start a figure and put it on hold.
 figure(1)
@@ -175,15 +183,12 @@ axis([2 7 0 1 60 300])
 grid on
 drawnow
 
-% Plot Cycle TODO: Plot cycles for data above
-plot3(s_cycle/1e3,x_cycle,T_cycle,'-or','LineWidth',2);
+plot3(s_plot/1e3,x_plot,T_plot,'-or','LineWidth',2);
 drawnow
 
+load Tsx_Data
 % Tell the user the composition planes to be shown.
 xN2_planes = clist;
-
-% Show the P-rho critical locus on the plot.
-% plot3(sc/1e3,xN2,Tc,'kx','LineWidth',2)
 
 % Add domes at each plane.
 for i=1:1:NCS
@@ -200,21 +205,24 @@ end
 
 % Put splines through the bubble and dew data in the composition direction.
 [row col] = size(Tdew);
-plot3(sdewSpline(1,:)/1e3,xN2Spline,TdewSpline(1,:),'b-','LineWidth',2)
-plot3(sbubSpline(1,:)/1e3,xN2Spline,TbubSpline(1,:),'b-','LineWidth',2)
-drawnow
+for j=1
+    plot3(sdewSpline(j,:)/1e3,xN2Spline,TdewSpline(j,:),'b-','LineWidth',2)
+    plot3(sbubSpline(j,:)/1e3,xN2Spline,TbubSpline(j,:),'b-','LineWidth',2)
+    drawnow
+end
 
 % Tell the user the pressure surfaces to be shown.
-P_surfaces = Plist;
+P_surfaces = Plist
 
 % Add isobars.
 for i=1:1:NCS
     % Do the points below the dome.
-    plot3(sisoPlow(:,1,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,1,i),'b-','LineWidth',2)
-    plot3(sisoPhigh(:,1,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,1,i),'b-','LineWidth',2)
-    drawnow
+    for j=1
+        plot3(sisoPlow(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,j,i),'b-','LineWidth',2)
+        plot3(sisoPhigh(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,j,i),'b-','LineWidth',2)
+        drawnow
+    end
 end
 
 % Finished with the dynamic plot.  Close it out.
 hold off
-improvePlot
