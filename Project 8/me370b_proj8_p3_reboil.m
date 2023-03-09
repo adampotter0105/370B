@@ -1,6 +1,13 @@
 clear all
 
-%% Set up Air properties
+addpath 'Fundamental Relation Files'
+addpath 'Fundamental Relation Data'
+addpath 'Mixture Models'
+addpath 'Setup Files'
+addpath 'Property Files'
+addpath 'Procedure Files'
+
+% Set up Air properties
 N = 3;
 Setup_Air_Props
 Mair = 28.9586;                 % kg/kmol
@@ -28,7 +35,10 @@ MW_O2 = 31.999; % (g/mol)
 MW_N2 = 28.0134; % (g/mol)
 MW_Ar = 39.948; % (g/mol)
 
-Setup_Air_Props
+N2 = 1;
+O2 = 2;
+
+Setup_Air_Props;
 
 % Functions for saturated liquids and vapors
 % [T rl rv y] = Fast_Bubble_cP(x,P,varargin)
@@ -73,10 +83,10 @@ s4l = s_crT(x4, rf4, T4);
 s4v = s_crT(y4, rg4, T4);
 s4 = s4v*q4 + s4l*(1-q4);
 
-%% Now iterate over output composition until column top matches air flash
+% Now iterate over output composition until column top matches air flash
 
 % Column Parameters
-n_trays = 3;
+n_trays = 10;
 reboil_quality = 0.7;
 P_col = 1e5;
 
@@ -133,15 +143,18 @@ end
 
 x_out
 
+% Plots
+
 % Assemble Data for Plotting
 % Data from flashing air process
 T_cycle = [T1, T1, T3, T4];
 s_cycle = [s1, s2, s3, s4];
 x_cycle = [c(N2), c(N2), c(N2), q4*y4(N2)+(1-q4)*x4(N2)]; % overall composition
-T_tray = zeros(1,n_trays+1);
-x_tray = zeros(1,n_trays+1);
-s_tray = zeros(1,n_trays+1);
-% Data for tie lines
+T_tray = zeros(1,n_trays);
+x_tray = zeros(1,n_trays);
+s_tray = zeros(1,n_trays);
+
+%% Data for tie lines
 y_tie = zeros(1,n_trays+1);
 x_tie = zeros(1,n_trays+1);
 T_tie = zeros(1,n_trays+1);
@@ -168,9 +181,9 @@ sl = s_crT(x_out, r_xout, T_tie(1));
 sl_tie(1) = sl;
 
 % Process Lines
-T_tray(1) = vapout(1).T;
-x_tray(1) = reboil_quality*vapout(1).c(N2) + (1-reboil_quality)*x_out(N2);
-s_tray(1) = sv*reboil_quality + sl*(1-reboil_quality);
+% T_tray(1) = vapout(1).T;
+% x_tray(1) = reboil_quality*vapout(1).c(N2) + (1-reboil_quality)*x_out(N2);
+% s_tray(1) = sv*reboil_quality + sl*(1-reboil_quality);
 
 for i = 2:length(vapout)
     % Tie Lines
@@ -183,15 +196,40 @@ for i = 2:length(vapout)
     sl_tie(i) = sl;
     
     % Process Lines
-    T_tray(i) = vapout(i).T;
-    qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i-1).mdot);
-    x_tray(i) = qual_tray*vapout(1).c(N2) + (1-qual_tray)*liqin(i-1).c(N2);
-    s_tray(i) = sv*qual_tray + sl*(1-qual_tray);
+%     T_tray(i) = vapout(i).T;
+%     qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i-1).mdot);
+%     x_tray(i) = qual_tray*vapout(1).c(N2) + (1-qual_tray)*liqin(i-1).c(N2);
+%     s_tray(i) = sv*qual_tray + sl*(1-qual_tray);
 end
+%=======
 
-T_plot = [T_cycle flip(T_tray)];
-x_plot = [x_cycle flip(x_tray)];
-s_plot = [s_cycle flip(s_tray)];
+%% Data for Trays
+for i = 1:length(vapout)-1
+    T_tray(i) = liqin(i).T; % Append to temps above
+    xv = vapout(i).c(N2);
+    xl = liqin(i+1).c(N2); % TODO: double check this
+    qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i+1).mdot);
+    x_tot = xv*qual_tray + xl*(1-qual_tray);
+    x_tray(i) = x_tot;
+    r_tot = vapout(i).r*qual_tray + liqin(i+1).r*(1-qual_tray); % check this
+    s_tray(i) = s_crT(x_tot,r_tot,vapout(i).T);
+    
+end
+% TODO: For bottom tray (reboiler) use x_out for liq
+xl = x_out(N2);
+xv = vapout(1).c(N2);
+T_last = vapout(1).T;
+qual_tray = reboil_quality; %vapout(end).mdot/(vapout(end).mdot+
+x_tot = xv*qual_tray + xl*(1-qual_tray);
+x_last = x_tot;
+r_tot = vapout(1).r*qual_tray + liqin(1).r*(1-qual_tray); % check this
+s_last = s_crT(x_tot,r_tot,vapout(1).T);
+
+T_plot = [T_cycle flip(T_tray) T_last];
+x_plot = [x_cycle flip(x_tray) x_last];
+s_plot = [s_cycle flip(s_tray) s_last];
+
+
 % Start Plotting, include vapor dome data
 % Load a file to save recalculating things up to here.
 
@@ -202,13 +240,14 @@ hold on
 ylabel('Nitrogen Mole Fraction','rotation',0)
 xlabel('Specific Entropy (kJ/kg-K)','rotation',0)
 zlabel('Temperature (K)')
+title('10 trays, 0.70 reboiler');
 view([-10 40])
-axis([2 7 0 1 60 300])
+axis([2 7 0 1 70 300])
 grid on
 drawnow
 
 % Plot Generated Data
-plot3(s_plot/1e3,x_plot,T_plot,'-or','LineWidth',2);
+plot3(s_plot/1e3,x_plot,T_plot,'-or','LineWidth',1.5);
 drawnow
 
 % Plot tie Lines
@@ -263,3 +302,36 @@ hold off
 view(90,0)
 ylim([0 1])
 zlim([76 92])
+
+% Plot Mass Flow
+vap_up(1) = vapout(1).mdot;
+liq_down(1) = liqin(1).mdot - vapout(1).mdot;
+mass_flow(1) = vap_up(1) + liq_down(1);
+for i = 2:length(vapout)
+    vap_up(i) = vapout(i).mdot;
+    liq_down(i) = liqin(i-1).mdot;
+    mass_flow(i) = vapout(i).mdot + liqin(i-1).mdot;
+end
+vap_up(length(vapout)+1) = ((1-q4)/q4)* liqin(length(vapout)).mdot;
+liq_down(length(vapout)+1) = liqin(length(vapout)).mdot;
+mass_flow(length(vapout)+1) = vap_up(length(vapout)+1) + liq_down(length(vapout)+1);
+
+% Interlace arrays
+for i = 1:length(vap_up)
+    line1(2*i) = vap_up(i);
+    line1(2*i-1) = mass_flow(i);
+    line2(2*i) = liq_down(i);
+    line2(2*i-1) = mass_flow(i);
+end
+
+figure(2)
+hold on
+plot(line1(1:end-1), "--o")
+plot(line2(1:end-1), "--o")
+xticks(1:2:24)
+xticklabels(["C", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "F"])
+xlabel("Tray Number")
+ylabel("Mass Flow Normalized by Output Stream")
+legend(["Vapor Up", "Liquid Down"])
+hold off
+improvePlot
