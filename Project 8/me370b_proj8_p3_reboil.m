@@ -76,7 +76,7 @@ s4 = s4v*q4 + s4l*(1-q4);
 %% Now iterate over output composition until column top matches air flash
 
 % Column Parameters
-n_trays = 10;
+n_trays = 3;
 reboil_quality = 0.7;
 P_col = 1e5;
 
@@ -138,32 +138,56 @@ x_out
 T_cycle = [T1, T1, T3, T4];
 s_cycle = [s1, s2, s3, s4];
 x_cycle = [c(N2), c(N2), c(N2), q4*y4(N2)+(1-q4)*x4(N2)]; % overall composition
-T_tray = zeros(1,n_trays);
-x_tray = zeros(1,n_trays);
-s_tray = zeros(1,n_trays);
+T_tray = zeros(1,n_trays+1);
+x_tray = zeros(1,n_trays+1);
+s_tray = zeros(1,n_trays+1);
 % Data for tie lines
-x_vap = [y4(N2)];
-x_liq = [x4(N2)];
+y_tie = zeros(1,n_trays+1);
+x_tie = zeros(1,n_trays+1);
+T_tie = zeros(1,n_trays+1);
+sl_tie = zeros(1,n_trays+1);
+sv_tie = zeros(1,n_trays+1);
+% Add tie lines for flash process
+y_ftie = y4(N2);
+x_ftie = x4(N2);
+T_ftie = T4;
+sl_ftie = s_crT(x4,rf4,T4);
+sv_ftie = s_crT(y4,rg4,T4);
+
 
 % Data for average
-for i = 1:length(vapout)-1
-    T_tray(i) = vapout(i).T; % Append to temps above
-    xv = vapout(i).c(N2);
-    xl = liqin(i+1).c(N2); % TODO: double check this
-    x_vap(i+1) = xv;
-    x_liq(i+1) = xl;
-    qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i+1).mdot);
-    x_tot = xv*qual_tray + xl*(1-qual_tray);
-    x_tray(i) = x_tot;
-    r_tot = vapout(i).r*qual_tray + liqin(i+1).r*(1-qual_tray); % check this
-    s_tray(i) = s_crT(x_tot,r_tot,vapout(i).T);
-    % TODO: Find quality of tray in order to find overall composition (x) and
-    % entropy (s)
-    
-    
-end
-% TODO: For bottom tray (reboiler) use x_out for liq
+% Reboiler
+% Tie Lines
+y_tie(1) = vapout(1).c(N2);
+x_tie(1) = x_out(N2);
+T_tie(1) = vapout(1).T;
+sv = s_crT(vapout(1).c, vapout(1).r, T_tie(1));
+sv_tie(1) = sv;
+r_xout = rl_cTP(x_out, T_tie(1), P_col);
+sl = s_crT(x_out, r_xout, T_tie(1));
+sl_tie(1) = sl;
 
+% Process Lines
+T_tray(1) = vapout(1).T;
+x_tray(1) = reboil_quality*vapout(1).c(N2) + (1-reboil_quality)*x_out(N2);
+s_tray(1) = sv*reboil_quality + sl*(1-reboil_quality);
+
+for i = 2:length(vapout)
+    % Tie Lines
+    y_tie(i) = vapout(i).c(N2);
+    x_tie(i) = liqin(i-1).c(N2);
+    T_tie(i) = vapout(i).T;
+    sv = s_crT(vapout(i).c, vapout(i).r, T_tie(i));
+    sv_tie(i) = sv;
+    sl = s_crT(liqin(i-1).c, liqin(i-1).r, T_tie(i));
+    sl_tie(i) = sl;
+    
+    % Process Lines
+    T_tray(i) = vapout(i).T;
+    qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i-1).mdot);
+    x_tray(i) = qual_tray*vapout(1).c(N2) + (1-qual_tray)*liqin(i-1).c(N2);
+    s_tray(i) = sv*qual_tray + sl*(1-qual_tray);
+end
 
 T_plot = [T_cycle flip(T_tray)];
 x_plot = [x_cycle flip(x_tray)];
@@ -183,7 +207,15 @@ axis([2 7 0 1 60 300])
 grid on
 drawnow
 
+% Plot Generated Data
 plot3(s_plot/1e3,x_plot,T_plot,'-or','LineWidth',2);
+drawnow
+
+% Plot tie Lines
+plot3([sl_ftie sv_ftie]/1e3, [x_ftie y_ftie], [T_ftie T_ftie], "b--o")
+for i = 1:length(T_tie)
+    plot3([sl_tie(i) sv_tie(i)]/1e3, [x_tie(i) y_tie(i)], [T_tie(i) T_tie(i)], "b--o")
+end
 drawnow
 
 load Tsx_Data
@@ -212,7 +244,7 @@ for j=1
 end
 
 % Tell the user the pressure surfaces to be shown.
-P_surfaces = Plist
+P_surfaces = Plist;
 
 % Add isobars.
 for i=1:1:NCS
@@ -226,3 +258,8 @@ end
 
 % Finished with the dynamic plot.  Close it out.
 hold off
+
+% Give Side View
+view(90,0)
+ylim([0 1])
+zlim([76 92])
