@@ -1,6 +1,13 @@
 clear all
 
-%% Set up Air properties
+addpath 'Fundamental Relation Files'
+addpath 'Fundamental Relation Data'
+addpath 'Mixture Models'
+addpath 'Setup Files'
+addpath 'Property Files'
+addpath 'Procedure Files'
+
+% Set up Air properties
 N = 3;
 Setup_Air_Props
 Mair = 28.9586;                 % kg/kmol
@@ -28,7 +35,10 @@ MW_O2 = 31.999; % (g/mol)
 MW_N2 = 28.0134; % (g/mol)
 MW_Ar = 39.948; % (g/mol)
 
-Setup_Air_Props
+N2 = 1;
+O2 = 2;
+
+Setup_Air_Props;
 
 % Functions for saturated liquids and vapors
 % [T rl rv y] = Fast_Bubble_cP(x,P,varargin)
@@ -73,7 +83,7 @@ s4l = s_crT(x4, rf4, T4);
 s4v = s_crT(y4, rg4, T4);
 s4 = s4v*q4 + s4l*(1-q4);
 
-%% Now iterate over output composition until column top matches air flash
+% Now iterate over output composition until column top matches air flash
 
 % Column Parameters
 n_trays = 10;
@@ -133,6 +143,8 @@ end
 
 x_out
 
+% Plots
+
 % Assemble Data for Plotting
 % Data from flashing air process
 T_cycle = [T1, T1, T3, T4];
@@ -142,34 +154,56 @@ T_tray = zeros(1,n_trays);
 x_tray = zeros(1,n_trays);
 s_tray = zeros(1,n_trays);
 % Data for tie lines
-x_vap = [y4(N2)];
-x_liq = [x4(N2)];
+x_vap = zeros(1,n_trays);
+x_liq = [x_out(N2) liqin(1).c(N2)];
+r_vap = zeros(1,n_trays);
+r_liq = [rf4 liqin(1).r];
 
 % Data for average
 for i = 1:length(vapout)-1
-    T_tray(i) = vapout(i).T; % Append to temps above
+    T_tray(i) = liqin(i).T; % Append to temps above
     xv = vapout(i).c(N2);
     xl = liqin(i+1).c(N2); % TODO: double check this
-    x_vap(i+1) = xv;
-    x_liq(i+1) = xl;
+    x_vap(i) = xv;
+    x_liq(i+2) = xl;
+    r_vap(i) = vapout(i).r;
+    r_liq(i+2) = liqin(i+1).r;
     qual_tray = vapout(i).mdot/(vapout(i).mdot+liqin(i+1).mdot);
     x_tot = xv*qual_tray + xl*(1-qual_tray);
     x_tray(i) = x_tot;
     r_tot = vapout(i).r*qual_tray + liqin(i+1).r*(1-qual_tray); % check this
     s_tray(i) = s_crT(x_tot,r_tot,vapout(i).T);
-    % TODO: Find quality of tray in order to find overall composition (x) and
-    % entropy (s)
-    
     
 end
 % TODO: For bottom tray (reboiler) use x_out for liq
+xl = x_out(N2);
+xv = vapout(1).c(N2);
+x_vap = [x_vap y4(N2)];
+r_vap = [r_vap rg4];
+%x_liq = [x_liq];
+T_last = vapout(1).T;
+qual_tray = reboil_quality; %vapout(end).mdot/(vapout(end).mdot+
+x_tot = xv*qual_tray + xl*(1-qual_tray);
+x_last = x_tot;
+r_tot = vapout(1).r*qual_tray + liqin(1).r*(1-qual_tray); % check this
+s_last = s_crT(x_tot,r_tot,vapout(1).T);
 
+T_plot = [T_cycle flip(T_tray) T_last];
+x_plot = [x_cycle flip(x_tray) x_last];
+s_plot = [s_cycle flip(s_tray) s_last];
 
-T_plot = [T_cycle flip(T_tray)];
-x_plot = [x_cycle flip(x_tray)];
-s_plot = [s_cycle flip(s_tray)];
+% Tie line matrix
+for j = 1:length(x_vap)
+    x_tie(:,j) = [x_vap(j) x_liq(j)];
+    T_tie(:,j) = [T_plot(length(T_plot)-j+1) T_plot(length(T_plot)-j+1)];
+    s_vap = s_crT(x_vap(j),r_vap(j),T_plot(length(T_plot)-j+1));
+    s_liq = s_crT(x_liq(j),r_liq(j),T_plot(length(T_plot)-j+1));
+    s_tie(:,j) = [s_vap s_liq]; % CHECK THIS
+end
 % Start Plotting, include vapor dome data
 % Load a file to save recalculating things up to here.
+
+
 
 % We will build the surface as we go.  Start a figure and put it on hold.
 figure(1)
@@ -178,13 +212,20 @@ hold on
 ylabel('Nitrogen Mole Fraction','rotation',0)
 xlabel('Specific Entropy (kJ/kg-K)','rotation',0)
 zlabel('Temperature (K)')
+title('10 trays, 0.70 reboiler');
 view([-10 40])
-axis([2 7 0 1 60 300])
+axis([2 7 0 1 76 92])
 grid on
 drawnow
 
-plot3(s_plot/1e3,x_plot,T_plot,'-or','LineWidth',2);
+plot3(s_plot/1e3,x_plot,T_plot,'--or','LineWidth',1.5);
 drawnow
+
+% Tie lines
+for j = 1:length(x_vap)
+    plot3(s_tie(:,j)/1e3,x_tie(:,j),T_tie(:,j),'-*g','LineWidth',2);
+    drawnow
+end
 
 load Tsx_Data
 % Tell the user the composition planes to be shown.
@@ -225,4 +266,28 @@ for i=1:1:NCS
 end
 
 % Finished with the dynamic plot.  Close it out.
-hold off
+hold off;
+
+% figure(2)
+% plot(x_plot,T_plot,'--or','LineWidth',2);
+% hold on;
+% for j = 1:length(x_vap)
+%     plot(x_tie(:,j),T_tie(:,j),'-*g','LineWidth',2);
+% end
+% 
+% % Add dew and bubble points.
+% for i=1:1:NCS
+%     plot(xN2(i)*ones(1,NPSSC),Tdew(i,:),'w.');
+%     plot(xN2(i)*ones(1,NPSSC),Tbub(i,:),'w.');
+% end
+% 
+% % Put splines through the bubble and dew data in the composition direction.
+% [row col] = size(Tdew);
+% for j=1
+%     plot(xN2Spline,TdewSpline(j,:),'b-','LineWidth',2);
+%     plot(xN2Spline,TbubSpline(j,:),'b-','LineWidth',2);
+% end
+% 
+% ylim([76 92]);
+% xlim([0 1]);
+% hold off;
