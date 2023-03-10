@@ -1,5 +1,5 @@
 % ME370B: Modeling and Advanced Concepts
-% Project 7 - Part 3
+% Project 8 - Part 3
 % Andy Huynh
 
 clear all
@@ -31,7 +31,7 @@ if(N == 2)
 end
 
 % Set parameters
-n_trays = 10;    % number of trays
+n_trays = 10;   % number of trays
 qC_mass = 0.6;  % quality of condenser
 P       = 1e5;  % 1 bar - isobaric process
 
@@ -60,18 +60,18 @@ s4  = s4v*q4 + s4l*(1-q4);
 x4  = q4*y4(N2)+(1-q4)*x4(N2);
 
 % Initialize some variables to store data.
-Tplot = zeros(1,n_trays+5);
-splot = zeros(1,n_trays+5);
-xplot = zeros(1,n_trays+5);
+Tplot = zeros(1,n_trays+2);
+splot = zeros(1,n_trays+2);
+xplot = zeros(1,n_trays+2);
 
 % Get the values at the flash (feed tray)
-Tplot([end-3:end])  = [T4 T3 T2 T1];
-splot([end-3:end])  = [s4 s3 s2 s1];
-xplot([end-3:end])  = [x4 c(N2) c(N2) c(N2)];
+Tplot(end)  = T4;
+splot(end)  = s4;
+xplot(end)  = x4;
 
 % Moving from top of condenser to bottom
 % Guess the composition of vapor outlet
-for n = 0.7:0.0001:0.999
+for n = 0.7:0.001:0.999
     % Get the data at the condenser
     y_out_mole(N2)  = n;
     y_out_mole(O2)  = 1-n;
@@ -80,8 +80,7 @@ for n = 0.7:0.0001:0.999
     sl              = s_crT(x_out_mole,rx_out,T_out);
     sv              = s_crT(y_out_mole,ry_out,T_out);
     splot(1)        = sv*qC_mass + sl*(1-qC_mass);
-    %xplot(1)        = y_out_mole(N2)*qC_mass + x_out_mole(N2)*(1-qC_mass);
-    xplot(1)        = n;
+    xplot(1)        = y_out_mole(N2)*qC_mass + x_out_mole(N2)*(1-qC_mass);
 
     % Rename to input variables to trays
     T_liq_above = T_out;
@@ -114,88 +113,88 @@ for n = 0.7:0.0001:0.999
 end
 
 
-% % Plots!
-% % Data for tie lines
-% y_tie = zeros(1,n_trays+1);
-% x_tie = zeros(1,n_trays+1);
-% T_tie = zeros(1,n_trays+1);
-% sl_tie = zeros(1,n_trays+1);
-% sv_tie = zeros(1,n_trays+1);
-% % Add tie lines for flash process
-% y_ftie = y4(N2);
-% x_ftie = x4(N2);
-% T_ftie = T4;
-% sl_ftie = s_crT(x4,rf4,T4);
-% sv_ftie = s_crT(y4,rg4,T4);
-% 
-% % Plot 3D T-s-x
-% figure(1)
-% hold on
-% ylabel('Nitrogen Mole Fraction','rotation',0)
-% xlabel('Specific Entropy (kJ/kg-K)','rotation',0)
-% zlabel('Temperature (K)')
-% title('10 trays, 0.60 condenser quality');
-% view([-10 40])
-% axis([2 7 0 1 50 300])
-% grid on
-% drawnow
-% 
-% % Plot Generated Data
-% plot3(splot/1e3,xplot,Tplot,'-or','LineWidth',1.5);
-% drawnow
-% 
-% % Plot tie Lines
-% plot3([sl_ftie sv_ftie]/1e3, [x_ftie y_ftie], [T_ftie T_ftie], "b--o")
-% for i = 1:length(T_tie)
-%     plot3([sl_tie(i) sv_tie(i)]/1e3, [x_tie(i) y_tie(i)], [T_tie(i) T_tie(i)], "b--o")
-% end
-% drawnow
-% 
-% load Tsx_Data
-% % Tell the user the composition planes to be shown.
-% xN2_planes = clist;
-% 
-% % Add domes at each plane.
-% for i=1:1:NCS
-%     plot3(sdome(i,:)/1e3,xN2(i)*ones(1,length(sdome)),Tdome(i,:),'k-','LineWidth',2)
-%     drawnow
-% end
-% 
-% % Add dew and bubble points.
-% for i=1:1:NCS
-%     plot3(sdew(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tdew(i,:),'b.','LineWidth',2)
-%     plot3(sbub(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tbub(i,:),'b.','LineWidth',2)
-%     drawnow
-% end
-% 
-% % Put splines through the bubble and dew data in the composition direction.
-% [row col] = size(Tdew);
-% for j=1
-%     plot3(sdewSpline(j,:)/1e3,xN2Spline,TdewSpline(j,:),'b-','LineWidth',2)
-%     plot3(sbubSpline(j,:)/1e3,xN2Spline,TbubSpline(j,:),'b-','LineWidth',2)
-%     drawnow
-% end
-% 
-% % Tell the user the pressure surfaces to be shown.
-% P_surfaces = Plist;
-% 
-% % Add isobars.
-% for i=1:1:NCS
-%     % Do the points below the dome.
-%     for j=1
-%         plot3(sisoPlow(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,j,i),'b-','LineWidth',2)
-%         plot3(sisoPhigh(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,j,i),'b-','LineWidth',2)
-%         drawnow
-%     end
-% end
-% 
-% % Finished with the dynamic plot.  Close it out.
-% hold off
-% 
-% % Give Side View
-% view(90,0)
-% ylim([0 1])
-% zlim([76 92])
+% Plots!
+% Data for tie lines
+y_tie = zeros(1,n_trays+1);
+x_tie = zeros(1,n_trays+1);
+T_tie = zeros(1,n_trays+1);
+sl_tie = zeros(1,n_trays+1);
+sv_tie = zeros(1,n_trays+1);
+% Add tie lines for flash process
+y_ftie = y4(N2);
+x_ftie = x4(N2);
+T_ftie = T4;
+sl_ftie = s_crT(x4,rf4,T4);
+sv_ftie = s_crT(y4,rg4,T4);
+
+% Plot 3D T-s-x
+figure(1)
+hold on
+ylabel('Nitrogen Mole Fraction','rotation',0)
+xlabel('Specific Entropy (kJ/kg-K)','rotation',0)
+zlabel('Temperature (K)')
+title('10 trays, 0.60 condenser quality');
+view([-10 40])
+axis([2 7 0 1 50 300])
+grid on
+drawnow
+
+% Plot Generated Data
+plot3(splot/1e3,xplot,Tplot,'-or','LineWidth',1.5);
+drawnow
+
+% Plot tie Lines
+plot3([sl_ftie sv_ftie]/1e3, [x_ftie y_ftie], [T_ftie T_ftie], "b--o")
+for i = 1:length(T_tie)
+    plot3([sl_tie(i) sv_tie(i)]/1e3, [x_tie(i) y_tie(i)], [T_tie(i) T_tie(i)], "b--o")
+end
+drawnow
+
+load Tsx_Data
+% Tell the user the composition planes to be shown.
+xN2_planes = clist;
+
+% Add domes at each plane.
+for i=1:1:NCS
+    plot3(sdome(i,:)/1e3,xN2(i)*ones(1,length(sdome)),Tdome(i,:),'k-','LineWidth',2)
+    drawnow
+end
+
+% Add dew and bubble points.
+for i=1:1:NCS
+    plot3(sdew(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tdew(i,:),'b.','LineWidth',2)
+    plot3(sbub(i,:)/1e3,xN2(i)*ones(1,NPSSC),Tbub(i,:),'b.','LineWidth',2)
+    drawnow
+end
+
+% Put splines through the bubble and dew data in the composition direction.
+[row col] = size(Tdew);
+for j=1
+    plot3(sdewSpline(j,:)/1e3,xN2Spline,TdewSpline(j,:),'b-','LineWidth',2)
+    plot3(sbubSpline(j,:)/1e3,xN2Spline,TbubSpline(j,:),'b-','LineWidth',2)
+    drawnow
+end
+
+% Tell the user the pressure surfaces to be shown.
+P_surfaces = Plist;
+
+% Add isobars.
+for i=1:1:NCS
+    % Do the points below the dome.
+    for j=1
+        plot3(sisoPlow(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPlow(:,j,i),'b-','LineWidth',2)
+        plot3(sisoPhigh(:,j,i)/1e3,xN2(i)*ones(length(sdome)/2,1),TisoPhigh(:,j,i),'b-','LineWidth',2)
+        drawnow
+    end
+end
+
+% Finished with the dynamic plot.  Close it out.
+hold off
+
+% Give Side View
+view(90,0)
+ylim([0 1])
+zlim([76 92])
 
 
 
