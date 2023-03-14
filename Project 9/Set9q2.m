@@ -44,13 +44,13 @@ D_H2H2O = zeros(1,length(T));
 K = zeros(1, length(T));
 ECD_cat = zeros(1,length(T));
 ECD_an = zeros(1,length(T));
+A = zeros(1,length(T));
 
 P = 100000; % Pa
 P_atm = P/101325; % atm
 
 cathode = GRI30();
 set(cathode,'P',P, 'X', 'N2:0.79, O2:0.21');
-
 anode = GRI30();
 set(anode, 'P', P, 'X', 'H2:0.93, H2O:0.03');
 
@@ -71,12 +71,29 @@ for i = 1:length(T)
     ECD_cat(i) = ECD_cat_0*exp(-Ea_ecd/R*(1/T(i) - 1/T_0));
     ECD_an(i) = ECD_an_0*exp(-Ea_ecd/R*(1/T(i) - 1/T_0));
     
+    % affinity
+    mu_cat = chemPotentials(cathode);
+    mu_O2 = mu_cat(speciesIndex(cathode,'O2'));
+    mu_an = chemPotentials(anode);
+    mu_H2 = mu_an(speciesIndex(anode,'H2'));
+    mu_H2O = mu_an(speciesIndex(anode,'H2O'));
+    
+    A(i) = mu_H2 + 0.5*mu_O2 - mu_H2O;
     
 end
 
 % get values to normalize
-D_N2O2_1000 = ((a_np * (1273/sqrt(Tc_N2*Tc_O2))^b_np) * (Pc_N2*Pc_O2)^(1/3) * (Tc_N2*Tc_O2)^(5/12) * (1/M_N2 + 1/M_O2)^(1/2))/P_atm;
-D_H2H2O_1000 = ((a_w * (1273/sqrt(Tc_H2*Tc_H2O))^b_w) * (Pc_H2*Pc_H2O)^(1/3) * (Tc_H2*Tc_H2O)^(5/12) * (1/M_H2 + 1/M_H2O)^(1/2))/P_atm;
+D_N2O2_1000 = ((a_np * (1273.15/sqrt(Tc_N2*Tc_O2))^b_np) * (Pc_N2*Pc_O2)^(1/3) * (Tc_N2*Tc_O2)^(5/12) * (1/M_N2 + 1/M_O2)^(1/2))/P_atm;
+D_H2H2O_1000 = ((a_w * (1273.15/sqrt(Tc_H2*Tc_H2O))^b_w) * (Pc_H2*Pc_H2O)^(1/3) * (Tc_H2*Tc_H2O)^(5/12) * (1/M_H2 + 1/M_H2O)^(1/2))/P_atm;
+
+set(cathode,'T',1273.15);
+set(anode,'T',1273.15);
+mu_cat = chemPotentials(cathode);
+mu_O2 = mu_cat(speciesIndex(cathode,'O2'));
+mu_an = chemPotentials(anode);
+mu_H2 = mu_an(speciesIndex(anode,'H2'));
+mu_H2O = mu_an(speciesIndex(anode,'H2O'));
+A_0 = mu_H2 + 0.5*mu_O2 - mu_H2O;
 
 % normalize
 D_N2O2 = D_N2O2./D_N2O2_1000;
@@ -84,20 +101,24 @@ D_H2H2O = D_H2H2O./D_H2H2O_1000;
 K = K./K_0;
 ECD_cat = ECD_cat./ECD_cat_0;
 ECD_an = ECD_an./ECD_an_0;
+A = A./A_0;
 
 % plotting
 T_plot = T - 273.15;
 
 figure(1)
-plot(T_plot,D_N2O2);
+plot(T_plot,A,'LineWidth',2);
 hold on;
-plot(T_plot,D_H2H2O);
-plot(T_plot,K);
-plot(T_plot,ECD_cat);
+plot(T_plot,D_N2O2,'LineWidth',2);
+plot(T_plot,D_H2H2O,'LineWidth',2);
+plot(T_plot,K,'LineWidth',2);
+plot(T_plot,ECD_cat,'LineWidth',2);
 % plot(T_plot,ECD_an);
-legend('D_{N_2O_2}','D_{H_2H_2O}','Ionic Conductivity','Cathode Exchange Current Density');
+legend('Overall Reaction Affinity','N_2/O_2 Diffusivity','H_2/H_2O Diffusivity','Ionic Conductivity of YSZ','Cathode Exchange Current Density');
 xlabel(['Temperature (' char(176) 'C)']);
 ylabel('Normalized Quantities');
+%ylim([0 3]);
+title('Temperature vs. Quantities Normalized at 1000 C');
 hold off;
 
 
