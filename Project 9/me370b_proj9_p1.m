@@ -32,12 +32,18 @@ iH2O = speciesIndex(g_anod, 'H2O');
 
 % Electrochemical Potential    mu_elec = mu + x*F*(phi-phi_ref)
 
-% First Pass
+%% First Pass
 mu_c = chemPotentials(g_cath);
 mu_a = chemPotentials(g_anod);
 phi_ocp = (1/(2*F))*(mu_a(iH2) + 0.5*mu_c(iO2) - mu_a(iH2O) );
 
-% Second Pass
+% NEED mu_e_eq_a
+mu_o_ysz_eq_a = mu_a(iH2O) + 2*mu_e_eq_a - mu_a(iH2);
+mu_o_ysz_eq_c = mu_o_ysz_eq_a;
+
+mu_e_eq_c = 0.5*mu_o_ysz_eq_c - 0.25*mu_c(iO2);
+
+%% Second Pass
 I = 1e3; % (A/m^2)  ASSIGNED CURRENT DENSITY
 v = I/(2*F); % (mol/s*m^2)
 
@@ -54,7 +60,7 @@ mu_h2o_a = mu_a(iH2O) + dmu_gdl_h2o;
 mu_o2_a = mu_a(iO2) - dmu_gdl_o2;
 
 % Anode
-% NEEDS mu_o_ysz_eq_a, R_eq_a, dmu_e_a
+% NEEDS R_eq_a, dmu_e_a
 mu_o_a = mu_o_ysz_a + dmu_gdl_h2 + R*T*log(v/R_eq_a + ...
     exp((dmu_gdl_h2o+2*dmu_e_a)/(R*T)) );
 
@@ -62,10 +68,12 @@ mu_o_a = mu_o_ysz_a + dmu_gdl_h2 + R*T*log(v/R_eq_a + ...
 dmu_ysz_o = J*l_elec/K_ion;
 mu_o_c = mu_o_a +dmu_ysz_o;
 
-% NEED mu_e_eq_c, R_eq_c, mu_o_ysz_eq_c
+% Cathode
+% NEED R_eq_c
 mu_e_c = mu_e_eq_c + 0.25*dmu_gdl_o2 + 0.5*R*T*ln(v/R_eq_c + exp((mu_o_c - ...
     mu_o_ysz_eq_c)/(R*T)) );
 
+% Potential Between Electrodes (nickel losses neglected)
 % NEED mu_e_a
 dphi_ni = -(1/F)*(mu_e_c - mu_e_a);
 
