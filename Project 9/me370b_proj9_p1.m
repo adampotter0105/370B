@@ -38,9 +38,11 @@ mu_a = chemPotentials(g_anod);
 phi_ocp = (1/(2*F))*(mu_a(iH2) + 0.5*mu_c(iO2) - mu_a(iH2O) );
 
 % NEED mu_e_eq_a
+% mu_e_eq_a = mu_e_eq_c + F*phi_ocp    (this requires mu_e_eq_c though)
 mu_o_ysz_eq_a = mu_a(iH2O) + 2*mu_e_eq_a - mu_a(iH2);
 mu_o_ysz_eq_c = mu_o_ysz_eq_a;
 
+% Electron at Cathode
 mu_e_eq_c = 0.5*mu_o_ysz_eq_c - 0.25*mu_c(iO2);
 
 %% Second Pass
@@ -60,7 +62,8 @@ mu_h2o_a = mu_a(iH2O) + dmu_gdl_h2o;
 mu_o2_a = mu_a(iO2) - dmu_gdl_o2;
 
 % Anode
-% NEEDS R_eq_a, dmu_e_a
+% NEEDS R_eq_a
+dmu_e_a = 0; % because Ni losses are zero, CHECK!
 mu_o_a = mu_o_ysz_a + dmu_gdl_h2 + R*T*log(v/R_eq_a + ...
     exp((dmu_gdl_h2o+2*dmu_e_a)/(R*T)) );
 
