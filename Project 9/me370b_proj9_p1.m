@@ -8,7 +8,7 @@ h = 6.626e-34; % Plank's Constant
 
 % Button Cell Parameters
 T = 1000 + 273; % Opeerating Temperature (K)
-P_gas = 1e5; % Gas pressure (Pa)
+P = 1e5; % Gas pressure (Pa)
 K_ion = 15; %  Ionic Conductivity (S/m)
 D_H2_water = 3.8378e-3; % Binary Diffusivity (m^2/s)
 D_O2_N2 = 2.9417e-4; % Binary Diffusivity (m^2/s)
@@ -19,11 +19,11 @@ J_anod = 100*J_cath; % Exchange current density (A/m^2)
 
 % Cathode Gas (engineering air)
 g_cath = GRI30;
-set(g_cath, "T", T, "P", P_gas, "X", "N2:0.79, O2:0.21")
+set(g_cath, "T", T, "P", P, "X", "N2:0.79, O2:0.21")
 
 % Anode Gas (Humid H2)
 g_anod = GRI30;
-set(g_anod, "T", T, "P", P_gas, "X", "H2:0.93, H2O:0.03")
+set(g_anod, "T", T, "P", P, "X", "H2:0.93, H2O:0.03")
 
 iO2 = speciesIndex(g_cath, 'O2');
 iN2 = speciesIndex(g_cath, 'N2');
@@ -42,18 +42,30 @@ I = 1e3; % (A/m^2)  ASSIGNED CURRENT DENSITY
 v = I/(2*F); % (mol/s*m^2)
 
 % Diffusion Losses of GDL
+c = P/(R*T);
 dmu_gdl_h2 = -R*T*log(1-(J_anod*l_gdl)/(moleFraction(g_anod,'H2')*c*D_H2_water));
 dmu_gdl_h2o = -R*T*log(1+(J_anod*l_gdl)/(moleFraction(g_anod,'H2O')*c*D_H2_water));
-dmu_gdl_o2 = -R*T*log(( 1-(1-x)*exp(J_cath*l_gdl/(c*D_O2_N2)) )/moleFraction(g_cath,'O2'));
+dmu_gdl_o2 = -R*T*log(( 1-(1-moleFraction(g_cath,'O2'))*exp(J_cath*l_gdl/ ...
+    (c*D_O2_N2)) )/moleFraction(g_cath,'O2'));
 
 % Adjust chem potentials based on GDL losses
 mu_h2_a = mu_a(iH2) - dmu_gdl_h2;
-mu_h2o_a = mu_a(iH2O) + dmu_gdl_h20;
+mu_h2o_a = mu_a(iH2O) + dmu_gdl_h2o;
 mu_o2_a = mu_a(iO2) - dmu_gdl_o2;
 
-% Ohmic Losses in YSZ Electrolyte
+% Anode
+% NEEDS mu_o_ysz_eq_a, R_eq_a, dmu_e_a
+mu_o_a = mu_o_ysz_a + dmu_gdl_h2 + R*T*log(v/R_eq_a + ...
+    exp((dmu_gdl_h2o+2*dmu_e_a)/(R*T)) );
+
+% Ohmic Losses in YSZ Electrolyte 
 dmu_ysz_o = J*l_elec/K_ion;
 mu_o_c = mu_o_a +dmu_ysz_o;
 
-dphi_ni = -(1/F)*(mu_ni_c - mu_ni_a);
+% NEED mu_e_eq_c, R_eq_c, mu_o_ysz_eq_c
+mu_e_c = mu_e_eq_c + 0.25*dmu_gdl_o2 + 0.5*R*T*ln(v/R_eq_c + exp((mu_o_c - ...
+    mu_o_ysz_eq_c)/(R*T)) );
+
+% NEED mu_e_a
+dphi_ni = -(1/F)*(mu_e_c - mu_e_a);
 
