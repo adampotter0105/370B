@@ -4,7 +4,7 @@ close all
 
 % Given
 T         = 1000+273.15; % K
-p         = 101325; % Pa, pressure in GDL
+p         = 1e5; % Pa, pressure in GDL
 F         = 96485; % C/kmol, Faraday's constant
 ion_cond  = 15/((2*F)^2); % S/m, ionic conductivity of YSZ
 i_anode   = 100*1000; % A/m2, exchange current density 
@@ -54,7 +54,7 @@ Phi_eq              = 0.5/F*(mu_anode_H2_eq + 0.5*mu_cathode_O2_eq - mu_anode_H2
 
 % 2nd pass (net rate of reactiton)
 steps = 500;
-i_net = linspace(0, 51232.7, steps); % A/m2, specified current     %%% what is the maximum current density?  => when x_cathode_O2 becomes 0.  
+i_net = linspace(0, 50541.1, steps); % A/m2, specified current     %%% what is the maximum current density?  => when x_cathode_O2 becomes 0.  
 v     = i_net/(2*F); % mol/s/m2, reaction velocity
 
 % flux
