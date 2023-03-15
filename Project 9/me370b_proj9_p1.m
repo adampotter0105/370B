@@ -2,12 +2,12 @@ clear all
 
 % Constants
 R = 8.314; % Gas constant (J/mol*K)
-F = 9.648533e4; % Faraday's Constant (C/mol)
+F = 9.648533e7; % Faraday's Constant (C/mol)
 kb = 1.38065e-23; % Boltzman Constant (J/K) 
 h = 6.626e-34; % Plank's Constant
 
 % Button Cell Parameters
-T = 1000 + 273; % Opeerating Temperature (K)
+T = 1000 + 273; % Operating Temperature (K)
 P = 1e5; % Gas pressure (Pa)
 K_ion = 15; %  Ionic Conductivity (S/m)
 D_H2_water = 3.8378e-3; % Binary Diffusivity (m^2/s)
@@ -19,11 +19,11 @@ J_anod = 100*J_cath; % Exchange current density (A/m^2)
 
 % Cathode Gas (engineering air)
 g_cath = GRI30;
-set(g_cath, "T", T, "P", P, "X", "N2:0.79, O2:0.21")
+set(g_cath, "T", T, "P", P, "X", 'N2:0.79,O2:0.21')
 
 % Anode Gas (Humid H2)
 g_anod = GRI30;
-set(g_anod, "T", T, "P", P, "X", "H2:0.93, H2O:0.03")
+set(g_anod, "T", T, "P", P, "X", 'H2:0.97,H2O:0.03')
 
 iO2 = speciesIndex(g_cath, 'O2');
 iN2 = speciesIndex(g_cath, 'N2');
@@ -35,7 +35,7 @@ iH2O = speciesIndex(g_anod, 'H2O');
 %% First Pass
 mu_c = chemPotentials(g_cath);
 mu_a = chemPotentials(g_anod);
-phi_ocp = (1/(2*F))*(mu_a(iH2) + 0.5*mu_c(iO2) - mu_a(iH2O) );
+phi_ocp = (1/(2*F))*(mu_a(iH2) + 0.5*mu_c(iO2) - mu_a(iH2O) )
 
 % NEED mu_e_eq_a
 % mu_e_eq_a = mu_e_eq_c + F*phi_ocp    (this requires mu_e_eq_c though)
