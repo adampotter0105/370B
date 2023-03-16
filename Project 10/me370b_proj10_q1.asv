@@ -1,0 +1,16 @@
+% Channel Parameters
+channel_w = 10e-3; % meters
+channel_h = 5e-5; % meters
+channel_l = 0.5; % meters
+
+diff_elements = 100; % number of differential button elements along channel
+
+P = 3e5; % Operating pressure (assume no drop)
+T = 1000 + 273.15; % Operating temperature
+
+flow_anode = 1; % m/s
+lam_cath = 2; % ratio of needed air for reaction
+
+%Iterate over elements in channel
+for i = 1:diff_elements
+    button_FC(V, T, p, xH2, xO2)
