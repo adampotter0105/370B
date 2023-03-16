@@ -22,7 +22,7 @@ iH2  = speciesIndex(gas, 'H2');
 iH2O = speciesIndex(gas, 'H2O');
 iO2  = speciesIndex(gas, 'O2');
 iN2 = speciesIndex(gas, 'N2');
-MW = molecularWeights(gas); 
+%MW = molecularWeights(gas); 
 
 %% Gas input
 nsp       = nSpecies(gas);
@@ -54,12 +54,12 @@ mu_cathode_e_eq     = 0.5*mu_YSZ_cathode_O_eq - 0.25*mu_cathode_O2_eq;
 Phi_eq              = 0.5/F*(mu_anode_H2_eq + 0.5*mu_cathode_O2_eq - mu_anode_H2O_eq);  % J/C, electrical potential
 
 % Check voltage request
-if V < Phi_eq/3 || V > Phi_eq
-    fprintf("Voltage request out of bounds! \n")
+if V < 0 || V > Phi_eq
+    fprintf("button_FC Error: Voltage request out of bounds! \n")
 end
 
 % Loop NR around i_net
-i_max = 50541.1; % found manually (IMPROVE THIS)
+i_max = 50541.1; % found manually TODO: IMPROVE THIS GUESS, for diff T,P value may change
 i_guess = i_max/2;
 
 %NR Values
@@ -83,7 +83,7 @@ while it < max_it
         
         % 2nd pass (net rate of reactiton)
         v = i_try/(2*F); % mol/s/m2, reaction velocity
-        
+        % TODO: Add in temperature dependent parameters from project 9  problem 3
         % flux
         J_anode_H2  = v;
         J_anode_H2O = v;
@@ -137,10 +137,10 @@ while it < max_it
             return
         end
         
-        % Newton Raphson Step 
+        % Newton Raphson Step
         err_high = Phi_term(3) - V;
         err_low = Phi_term(1) - V;
-        dedi = (err_high - err_low)/(di_guess*i_guess);
+        dedi = (err_high - err_low)/(2*di_guess*i_guess);
         i_err = Phi_term(2) - V;
         i_guess = i_guess - i_err/dedi;
         
@@ -153,4 +153,4 @@ while it < max_it
 
 end
 
-fprintf("Failed to find current to matching current to requested voltage! \n")
+fprintf("button_FC Error: Failed to find current to matching current to requested voltage! \n")

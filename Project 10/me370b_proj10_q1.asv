@@ -1,16 +1,18 @@
-% Channel Parameters
-channel_w = 10e-3; % meters
-channel_h = 5e-5; % meters
-channel_l = 0.5; % meters
-
-diff_elements = 100; % number of differential button elements along channel
-
 P = 3e5; % Operating pressure (assume no drop)
 T = 1000 + 273.15; % Operating temperature
 
-flow_anode = 1; % m/s
-lam_cath = 2; % ratio of needed air for reaction
+I_range = linspace(0,100, 100);
+n = length(I_range);
 
-%Iterate over elements in channel
-for i = 1:diff_elements
-    button_FC(V, T, p, xH2, xO2)
+% Data Arrays
+V_data = NaN(1,n);
+Q_data = NaN(1,n);
+xH2_data = NaN(1,n);
+xO2_data = NaN(1,n);
+
+ohmic_loss
+
+for i = 1:n
+    [V_data(i), Q_data(i), xH2_data(i), xO2_data(i), losses] = FC_V_I(I_range(i), T, P);
+
+end
