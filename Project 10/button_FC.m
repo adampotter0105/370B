@@ -7,15 +7,34 @@ function [i_guess, losses] = button_FC(V, T, p, xH2, xO2)
 %T         = 1000+273.15; % K
 %p         = 1e5; % Pa, pressure in GDL
 F         = 96485; % C/kmol, Faraday's constant
-ion_cond  = 15/((2*F)^2); % S/m, ionic conductivity of YSZ
-i_anode   = 100*1000; % A/m2, exchange current density 
-i_cathode = 1000;
+%ion_cond  = 15/((2*F)^2); % S/m, ionic conductivity of YSZ
+%i_anode   = 100*1000; % A/m2, exchange current density 
+%i_cathode = 1000;
 L_YSZ     = 50*1e-6; % 50 um
 L_GDL     = 5*1e-3; % 5 mm
 R         = 8.3145; % J/kmol/K
-D_H2_H2O  = 3.8378*1e-3; % m2/s
-D_O2_N2   = 2.9417*1e-4;
+%D_H2_H2O  = 3.8378*1e-3; % m2/s
+%D_O2_N2   = 2.9417*1e-4;
 c         = p/(R*T);
+
+
+% Dynamic Parameters
+T_range = 700+273.15:100:1200+273.15;
+D_H2_H2O_range = [20.4354313003926 25.6763702034351 31.6113729970254 38.2614224613519 45.6463392373703 53.7849307201175]*1e-4;
+D_O2_N2_range = [1.79781502714731 2.14875657320207 2.52769556793826 2.93419328331759 3.36785305546872 3.82831337780325]*1e-4;
+i_cathode_range = [54.3448348129138 171.928233567501 446.954515296547 1000 1989.74465120697 3606.02653665849];
+i_net_max_range = [18130 43755 47097 50400 53707 56913];
+
+ion_cond_range = [0.902649181138542 2.74284526614914 6.89597012853954 15 29.1360516184125 51.7159093192034]./((2*F)^2);
+i_anode_range = 100*i_cathode_range; % A/m2, exchange current density 
+
+T = T_range(k);
+D_H2_H2O = interp1(T_range, D_H2_H2O_range, T);
+D_O2_N2 = interp1(T_range, D_O2_N2_range, T);
+i_cathode = interp1(T_range, i_cathode_range, T);
+i_max = interp1(T_range, i_net_max_range, T);
+ion_cond = interp1(T_range, ion_cond_range, T);
+i_anode = interp1(T_range, i_anode_range, T);
 
 gas  = Solution('GRI30.yaml');
 iH2  = speciesIndex(gas, 'H2');
@@ -59,7 +78,6 @@ if V < 0 || V > Phi_eq
 end
 
 % Loop NR around i_net
-i_max = 50541.1; % found manually TODO: IMPROVE THIS GUESS, for diff T,P value may change
 i_guess = i_max/2;
 
 %NR Values
@@ -83,7 +101,7 @@ while it < max_it
         
         % 2nd pass (net rate of reactiton)
         v = i_try/(2*F); % mol/s/m2, reaction velocity
-        % TODO: Add in temperature dependent parameters from project 9  problem 3
+
         % flux
         J_anode_H2  = v;
         J_anode_H2O = v;

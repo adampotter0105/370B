@@ -36,7 +36,7 @@ rho_cathode = molarDensity(gas)/1e3;
 % General Equation for mass change
 % cross_area*flowrate*molar_density*mole_fraction = current * (delta_mol_X/delta_mol_e- ) / F
 flow_cathode = lam_cath*I*0.25/(F*rho_cathode*cross_area*xO2_0); % Current determines how much O2 is needed
-
+% TODO: fix this flow equation, mole fraction updates may also be incorrect
 
 % HEAT FLUX
 Q = 0; % TODO: Not sure best way to calculate this
