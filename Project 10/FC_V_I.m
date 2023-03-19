@@ -5,7 +5,7 @@ function [v_guess, Q, xH2, xO2, loss_total] = FC_V_I(I, T, P)
 F = 96485; % C/mol, Faraday's constant
 % Channel Parameters
 channel_w = 10e-3; % meters
-channel_h = 5e-5; % meters
+channel_h = 5e-3; % meters
 channel_l = 0.5; % meters
 
 diff_elements = 20; % number of differential button elements along channel
@@ -41,7 +41,7 @@ flow_cathode = lam_cath*I*0.25/(F*rho_cathode*cross_area*xO2_0); % Current deter
 % HEAT FLUX
 Q = 0; % TODO: Not sure best way to calculate this
 
-%Iterate over elements in channel
+% Initialize loss struct
 loss_total.ohmic_loss = 0;   loss_total.cathode_loss = 0;
 loss_total.anode_loss = 0;   loss_total.gdl_loss = 0;
         
@@ -53,11 +53,12 @@ it = 0;
 v_guess = 0.7; % TODO: IMPROVE THIS
 v_max = 1.1; % TODO: Improve This
 
+% Run Newton raphson
 while it < max_it
     it = it + 1;
     v_prev = v_guess;
 
-    %Iterate through Elements
+    %Iterate through Elements in channel
     xH2 = xH2_0;  xO2 = xO2_0; I_total = 0;
     for i = 1:diff_elements
         [i_flux, losses] = button_FC(v_guess, T, P, xH2, xO2);
