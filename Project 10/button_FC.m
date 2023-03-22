@@ -28,7 +28,6 @@ i_net_max_range = [18130 43755 47097 50400 53707 56913];
 ion_cond_range = [0.902649181138542 2.74284526614914 6.89597012853954 15 29.1360516184125 51.7159093192034]./((2*F)^2);
 i_anode_range = 100*i_cathode_range; % A/m2, exchange current density 
 
-T = T_range(k);
 D_H2_H2O = interp1(T_range, D_H2_H2O_range, T);
 D_O2_N2 = interp1(T_range, D_O2_N2_range, T);
 i_cathode = interp1(T_range, i_cathode_range, T);
@@ -171,4 +170,4 @@ while it < max_it
 
 end
 
-fprintf("button_FC Error: Failed to find current to matching current to requested voltage! \n")
+fprintf("button_FC Error: Failed to find currentt to requested voltage! \n")

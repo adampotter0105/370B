@@ -8,7 +8,7 @@ channel_w = 10e-3; % meters
 channel_h = 5e-3; % meters
 channel_l = 0.5; % meters
 
-diff_elements = 20; % number of differential button elements along channel
+diff_elements = 10; % number of differential button elements along channel
 diff_area = channel_w*channel_l/diff_elements; % Area per button cell
 cross_area = channel_w*channel_h; % channel cross-sectional area
 
@@ -31,7 +31,7 @@ x_cathode = zeros(nsp, 1);
 x_cathode(iO2, 1) = xO2_0; 
 x_cathode(iN2, 1) = 1-xO2_0;
 set(gas, 'X', x_cathode); 
-rho_cathode = molarDensity(gas)/1e3;
+rho_cathode = molarDensity(gas)*1e3';
 
 % General Equation for mass change
 % cross_area*flowrate*molar_density*mole_fraction = current * (delta_mol_X/delta_mol_e- ) / F
@@ -50,7 +50,7 @@ tol = 1e-4;
 dv = 1e-3;
 max_it = 20;
 it = 0;
-v_guess = 0.7; % TODO: IMPROVE THIS
+v_guess = 0.8; % TODO: IMPROVE THIS
 v_max = 1.1; % TODO: Improve This
 
 % Run Newton raphson
@@ -73,11 +73,12 @@ while it < max_it
         % mole_fraction = (current*F*(delta_mol_X/delta_mol_e-))/(cross_area*molar_density*flowrate)
         x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
         x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
-        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)/1e3;
-        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)/1e3;
-
+        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
+        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
+        % mole_fraction = current * (delta_mol_X/delta_mol_e- ) /
+        % (cross_area*flowrate*molar_density*F)
         xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
-        xO2 = xO2 - i_diff*0.5/(F*cross_area*rho_cathode*flow_cathode);
+        xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
     end
 
     % Check for Convergence
@@ -94,10 +95,10 @@ while it < max_it
         I_high  = I_high + i_diff;
         x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
         x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
-        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)/1e3;
-        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)/1e3;
+        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
+        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
         xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
-        xO2 = xO2 - i_diff*0.5/(F*cross_area*rho_cathode*flow_cathode);
+        xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
     end
     % Low
     xH2 = xH2_0;  xO2 = xO2_0; I_low = 0;
@@ -107,10 +108,10 @@ while it < max_it
         I_low  = I_low + i_diff;
         x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
         x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
-        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)/1e3;
-        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)/1e3;
+        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
+        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
         xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
-        xO2 = xO2 - i_diff*0.5/(F*cross_area*rho_cathode*flow_cathode);
+        xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
     end
 
     dedv = ((I_high-I) - (I_low-I))/(2*dv);
