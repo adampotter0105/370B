@@ -1,7 +1,9 @@
 P = 3e5; % Operating pressure (assume no drop)
 T = 1000 + 273.15; % Operating temperature
 
-FC_V_I(50, T, P)
+% TEST
+FC_V_I(100, T, P)
+FC_V_I(150, T, P)
 
 % Current Sweep
 I_range = linspace(0,205, 50);

@@ -50,13 +50,13 @@ tol = 1e-4;
 dv = 1e-3;
 max_it = 20;
 it = 0;
-v_guess = 0.8; % TODO: IMPROVE THIS
-v_max = 1.1; % TODO: Improve This
+v_max = button_phi_eq(T, P, xH2_0, xO2_0); 
+v_guess = 0.8*v_max; % TODO: IMPROVE THIS
 
 % Run Newton raphson
 while it < max_it
     it = it + 1;
-    v_prev = v_guess;
+    v_prev = v_guess
 
     %Iterate through Elements in channel
     xH2 = xH2_0;  xO2 = xO2_0; I_total = 0;
@@ -79,52 +79,66 @@ while it < max_it
         % (cross_area*flowrate*molar_density*F)
         xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
         xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
+
+        phi_max = button_phi_eq(T, P, xH2, xO2);
+        if xH2 <= 0 || xO2 <= 0 || v_guess > phi_max 
+            break
+        end
     end
 
-    % Check for Convergence
-    if abs(I_total-I)/(I+tol) < tol
-        return
-    end
-
-    % Adjust with NR
-    %  High
-    xH2 = xH2_0;  xO2 = xO2_0; I_high = 0;
-    for i = 1:diff_elements
-        [i_flux, ~] = button_FC(v_guess+dv, T, P, xH2, xO2);
-        i_diff = i_flux*diff_area;
-        I_high  = I_high + i_diff;
-        x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
-        x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
-        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
-        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
-        xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
-        xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
-    end
-    % Low
-    xH2 = xH2_0;  xO2 = xO2_0; I_low = 0;
-    for i = 1:diff_elements
-        [i_flux, ~] = button_FC(v_guess-dv, T, P, xH2, xO2);
-        i_diff = i_flux*diff_area;
-        I_low  = I_low + i_diff;
-        x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
-        x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
-        set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
-        set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
-        xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
-        xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
-    end
-
-    dedv = ((I_high-I) - (I_low-I))/(2*dv);
-    i_err = I_total - I;
-    v_guess = v_guess - i_err/dedv;
-
-    % Bisection if guess out of bounds
-    if v_guess < 0
-        v_guess = v_prev/2;
-    elseif v_guess > v_max
+    if xH2 <= 0 || xO2 <= 0 % Reactants Depleted: voltage too low
         v_guess = (v_max - v_prev)/2 + v_prev;
-    end
+        fprintf("Reactants Depleted! Increasing voltage guess...  \n")
+    elseif v_guess > phi_max % Guess too high, button cannot reach that v_guess
+        v_guess = 0.9*v_guess;
 
+    else % Continue with NR
+
+        % Check for Convergence
+        if abs(I_total-I)/(I+tol) < tol
+            return
+        end
+    
+        % Adjust with NR
+        %  High
+        xH2 = xH2_0;  xO2 = xO2_0; I_high = 0;
+        for i = 1:diff_elements
+            [i_flux, ~] = button_FC(v_guess+dv, T, P, xH2, xO2);
+            i_diff = i_flux*diff_area;
+            I_high  = I_high + i_diff;
+            x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
+            x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
+            set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
+            set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
+            xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
+            xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
+        end
+        % Low
+        xH2 = xH2_0;  xO2 = xO2_0; I_low = 0;
+        for i = 1:diff_elements
+            [i_flux, ~] = button_FC(v_guess-dv, T, P, xH2, xO2);
+            i_diff = i_flux*diff_area;
+            I_low  = I_low + i_diff;
+            x_anode(iH2, 1)   = xH2; x_anode(iH2O, 1)  = 1-xH2;
+            x_cathode(iO2, 1) = xO2;  x_cathode(iN2, 1) = 1-xO2;
+            set(gas, 'X', x_anode);   rho_anode = molarDensity(gas)*1e3;
+            set(gas, 'X', x_cathode);  rho_cathode = molarDensity(gas)*1e3;
+            xH2 = xH2 - i_diff*0.5/(F*cross_area*rho_anode*flow_anode);
+            xO2 = xO2 - i_diff*0.25/(F*cross_area*rho_cathode*flow_cathode);
+        end
+    
+        dedv = ((I_high-I) - (I_low-I))/(2*dv);
+        i_err = I_total - I;
+        delta_v = min(abs(i_err/dedv), 0.05) * sign(i_err/dedv); % limit step size
+        v_guess = v_guess - delta_v;
+    
+        % Bisection if guess out of bounds
+        if v_guess < 0
+            v_guess = v_prev*0.9;
+        elseif v_guess > v_max
+            v_guess = (v_max - v_prev)/2 + v_prev;
+        end
+    end
 
 end
 
